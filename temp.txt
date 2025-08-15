@@ -1,32 +1,21 @@
-Sub OpenNewTab_AndRefresh()
+Sub OpenNewTabAndNavigateGoogle()
     Dim b As AutomateBrowser
     Set b = New_AutomateBrowser
-    
-    ' Launch Chrome (once)
+
+    ' Launch Chromium if not already running (optional)
     b.launch whichBrowser:=Chromium
-    
-    ' Open first tab and navigate
-    Dim firstTab As cdpConnection
-    Set firstTab = b.newTab
-    firstTab.Page.navigate "https://www.google.com"
-    firstTab.WaitForPageLoaded
-    
-    ' Refresh the first tab every 8 seconds in the background
-    Dim startTime As Double
-    startTime = Timer
-    Do While Timer - startTime < 60 ' refresh for 1 minute
-        firstTab.Page.reload
-        Application.Wait Now + TimeValue("00:00:08")
-    Loop
-    
-    ' Open a new tab without closing the session
-    Dim newTab As cdpConnection
-    Set newTab = b.newTab
-    newTab.Page.navigate "https://www.bing.com"
-    newTab.WaitForPageLoaded
-    
-    ' Optional: refresh the new tab as well
-    newTab.Page.reload
-    
-    ' Keep browser open; do not call b.Quit
+
+    ' Create a new tab (target)
+    Dim newTab As cdpTarget
+    Set newTab = b.targets.create
+
+    ' Attach to the new tab
+    Dim session As cdpSession
+    Set session = b.targets.attach(newTab)
+
+    ' Navigate to Google
+    session.send "Page.navigate", "{""url"":""https://www.google.com""}"
+
+    ' Wait for page to load (optional)
+    session.send "Page.enable"
 End Sub
