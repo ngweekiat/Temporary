@@ -1,69 +1,46 @@
-sub OpenNewTabAndNavigateToGoogle()
+Sub OpenNewTab()
+    ' Get a reference to the existing browser window.
+    ' This assumes a browser is already running.
+    Dim browser As AutomateBrowser
+    Set browser = New_AutomateBrowser
 
-    ' Declare a new CDPBrowser object. This object will manage the browser interaction.
-    Dim browser As CDPBrowser
-    Set browser = New CDPBrowser
-
-    ' --- Step 1: Start or Reattach to a Browser Instance ---
-    ' This line attempts to start a new Chrome browser instance or reattach to an existing one.
-    ' If a session was previously serialized (saved), it will try to reattach to that.
-    ' Parameters:
-    '   "chrome": Specifies the browser type (can be "edge" for Microsoft Edge).
-    '   appUrl: Optional URL to open when starting the browser. Left empty to open a blank page.
-    '   cleanActive: True to close any existing instances before starting. False to keep them.
-    '   reAttach: True to attempt reattaching to a previous session.
-    '   userProfile: Specify a user profile (e.g., "Profile 1"). "Default" is used if omitted.
-    On Error GoTo ErrorHandler
-    browser.Start "chrome", reAttach:=True
-
-    ' Check if the browser object is live and connected.
-    If Not browser.isLive Then
-        MsgBox "Failed to start or reattach to the browser. Please check browser.Start parameters and ensure browser process is not stuck.", vbCritical
+    ' Launch the browser and connect to an existing session.
+    ' If no browser is open, it will launch a new one.
+    ' You might need to adjust the launch parameters to match your specific setup.
+    If Not browser.launch("https://www.google.com/") Then
+        Debug.Print "Failed to launch or connect to browser."
         Exit Sub
     End If
+    
+    ' Get the target ID of the current active tab (the default one).
+    Dim currentTarget As Dictionary
+    Set currentTarget = browser.cdp.target.getTargetInfo
+    Dim currentTargetId As String
+    currentTargetId = currentTarget("targetInfo")("targetId")
 
-    ' Optional: Print current browser information to the Immediate Window for debugging.
-    browser.printParams
+    ' Create a new target (a new tab) and get its target ID.
+    Dim newTabUrl As String
+    newTabUrl = "https://www.bing.com/" ' The URL for the new tab.
 
-    ' --- Step 2: Open a New Tab ---
-    ' The newTab method creates a new tab within the current browser instance.
-    ' It returns a new CDPBrowser object specifically linked to this new tab.
-    ' Parameters:
-    '   url: The initial URL for the new tab. An empty string opens a blank tab.
-    '   newWindow: Set to True to open a completely new browser window instead of a tab.
-    '   setMain: If True, makes the new tab the "main" tab for the current CDPBrowser object.
-    Dim newTabBrowser As CDPBrowser
-    Set newTabBrowser = browser.newTab("about:blank", newWindow:=False, setMain:=False)
+    Dim newTarget As Dictionary
+    Set newTarget = browser.cdp.target.createTarget(newTabUrl)
+    Dim newTargetId As String
+    newTargetId = newTarget("targetId")
 
-    ' Check if the new tab was successfully created.
-    If newTabBrowser Is Nothing Then
-        MsgBox "Failed to open a new tab.", vbCritical
-        Exit Sub
-    End If
+    ' You can now switch to and interact with the new tab using its targetId.
+    ' For example, you can switch the active session to the new target.
+    browser.cdp.target.attachToTarget newTargetId
+    
+    ' To switch back to the original tab, you would re-attach to the original target ID.
+    ' browser.cdp.target.attachToTarget currentTargetId
 
-    ' Optional: Print information about the newly created tab.
-    newTabBrowser.printParams
+    ' Wait for a moment to see the new tab.
+    ' This is for demonstration purposes.
+    Application.Wait Now + TimeValue("00:00:05")
 
-    ' --- Step 3: Navigate the New Tab to Google ---
-    ' Use the navigate method on the 'newTabBrowser' object to go to the desired URL.
-    ' Parameters:
-    '   "https://www.google.com": The URL to navigate to.
-    '   till: ReadyState enum (isLoading, isInteractive, isComplete) to wait until the page reaches.
-    newTabBrowser.Navigate "https://www.google.com", till:=isComplete
+    ' Close the new tab.
+    browser.cdp.target.closeTarget newTargetId
 
-    MsgBox "Successfully opened a new tab and navigated to Google!", vbInformation
-
-    ' Important: Do NOT call browser.Quit here unless you want to close the entire browser instance.
-    ' The 'browser' object represents the overall browser, while 'newTabBrowser' represents the specific tab.
-    ' If you want to close only the new tab, you would use newTabBrowser.CloseTab (if implemented in CDPBrowser).
-    ' However, the provided CDPBrowser class currently only has a .closeTab method
-    ' that explicitly prevents closing the *main* session tab.
-    ' For this example, we'll leave the browser open so you can see the result.
-
-    Exit Sub
-
-ErrorHandler:
-    MsgBox "An error occurred: " & Err.Description, vbCritical, "Runtime Error"
-    ' You can add more detailed error logging here if needed.
-
+    ' Quit the browser.
+    browser.Quit
 End Sub
