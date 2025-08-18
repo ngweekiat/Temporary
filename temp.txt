@@ -1,55 +1,58 @@
 Option Explicit
 
 #If VBA7 Then
-    Private Declare PtrSafe Function SetWindowPos Lib "user32" _
-        (ByVal hWnd As LongPtr, ByVal hWndInsertAfter As LongPtr, _
-         ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, _
-         ByVal wFlags As Long) As LongPtr
     Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
         (ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
+
+    Private Declare PtrSafe Function SetWindowPos Lib "user32" _
+        (ByVal hwnd As LongPtr, ByVal hWndInsertAfter As LongPtr, _
+        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
+        ByVal wFlags As Long) As Long
+
+    Private Declare PtrSafe Function GetForegroundWindow Lib "user32" () As LongPtr
 #Else
-    Private Declare Function SetWindowPos Lib "user32" _
-        (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, _
-         ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, _
-         ByVal wFlags As Long) As Long
     Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" _
         (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
+
+    Private Declare Function SetWindowPos Lib "user32" _
+        (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, _
+        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
+        ByVal wFlags As Long) As Long
+
+    Private Declare Function GetForegroundWindow Lib "user32" () As Long
 #End If
 
-Const HWND_TOPMOST = -1
-Const SWP_NOSIZE = &H1
-Const SWP_NOMOVE = &H2
-
-Sub ShowClipboardTool()
-    frmClipboardTool.Show vbModeless
-    MakeFormTopMost frmClipboardTool.Caption
-End Sub
-
-Private Sub MakeFormTopMost(FormCaption As String)
-    Dim hWnd As LongPtr
-    hWnd = FindWindow(vbNullString, FormCaption)
-    If hWnd <> 0 Then
-        SetWindowPos hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE
-    End If
-End Sub
-
-
-
+Private Const SWP_NOSIZE As Long = &H1
+Private Const SWP_NOMOVE As Long = &H2
+Private Const SWP_NOACTIVATE As Long = &H10
+Private Const HWND_TOPMOST As Long = -1
 
 Private Sub UserForm_Initialize()
-    ' Populate dropdown options
+    ' Populate dropdown with options
     With cmbOptions
         .AddItem "Option 1"
         .AddItem "Option 2"
         .AddItem "Option 3"
-        .AddItem "My Custom Text"
     End With
 End Sub
 
+Private Sub UserForm_Activate()
+    ' Keep form always on top
+    Dim hWndForm As LongPtr
+    hWndForm = FindWindow(vbNullString, Me.Caption)
+    SetWindowPos hWndForm, HWND_TOPMOST, 0, 0, 0, 0, _
+                 SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE
+End Sub
+
 Private Sub cmbOptions_Click()
-    ' Copy the selected text to clipboard when clicked
+    ' Copy selected item to clipboard
     Dim DataObj As Object
     Set DataObj = CreateObject("MSForms.DataObject")
     DataObj.SetText cmbOptions.Value
     DataObj.PutInClipboard
+End Sub
+
+
+Sub ShowClipboardTool()
+    frmClipboardTool.Show vbModeless
 End Sub
