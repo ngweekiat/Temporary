@@ -1,46 +1,55 @@
-Sub OpenNewTab()
-    ' Get a reference to the existing browser window.
-    ' This assumes a browser is already running.
-    Dim browser As AutomateBrowser
-    Set browser = New_AutomateBrowser
+Option Explicit
 
-    ' Launch the browser and connect to an existing session.
-    ' If no browser is open, it will launch a new one.
-    ' You might need to adjust the launch parameters to match your specific setup.
-    If Not browser.launch("https://www.google.com/") Then
-        Debug.Print "Failed to launch or connect to browser."
-        Exit Sub
+#If VBA7 Then
+    Private Declare PtrSafe Function SetWindowPos Lib "user32" _
+        (ByVal hWnd As LongPtr, ByVal hWndInsertAfter As LongPtr, _
+         ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, _
+         ByVal wFlags As Long) As LongPtr
+    Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
+        (ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
+#Else
+    Private Declare Function SetWindowPos Lib "user32" _
+        (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, _
+         ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, _
+         ByVal wFlags As Long) As Long
+    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" _
+        (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
+#End If
+
+Const HWND_TOPMOST = -1
+Const SWP_NOSIZE = &H1
+Const SWP_NOMOVE = &H2
+
+Sub ShowClipboardTool()
+    frmClipboardTool.Show vbModeless
+    MakeFormTopMost frmClipboardTool.Caption
+End Sub
+
+Private Sub MakeFormTopMost(FormCaption As String)
+    Dim hWnd As LongPtr
+    hWnd = FindWindow(vbNullString, FormCaption)
+    If hWnd <> 0 Then
+        SetWindowPos hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE
     End If
-    
-    ' Get the target ID of the current active tab (the default one).
-    Dim currentTarget As Dictionary
-    Set currentTarget = browser.cdp.target.getTargetInfo
-    Dim currentTargetId As String
-    currentTargetId = currentTarget("targetInfo")("targetId")
+End Sub
 
-    ' Create a new target (a new tab) and get its target ID.
-    Dim newTabUrl As String
-    newTabUrl = "https://www.bing.com/" ' The URL for the new tab.
 
-    Dim newTarget As Dictionary
-    Set newTarget = browser.cdp.target.createTarget(newTabUrl)
-    Dim newTargetId As String
-    newTargetId = newTarget("targetId")
 
-    ' You can now switch to and interact with the new tab using its targetId.
-    ' For example, you can switch the active session to the new target.
-    browser.cdp.target.attachToTarget newTargetId
-    
-    ' To switch back to the original tab, you would re-attach to the original target ID.
-    ' browser.cdp.target.attachToTarget currentTargetId
 
-    ' Wait for a moment to see the new tab.
-    ' This is for demonstration purposes.
-    Application.Wait Now + TimeValue("00:00:05")
+Private Sub UserForm_Initialize()
+    ' Populate dropdown options
+    With cmbOptions
+        .AddItem "Option 1"
+        .AddItem "Option 2"
+        .AddItem "Option 3"
+        .AddItem "My Custom Text"
+    End With
+End Sub
 
-    ' Close the new tab.
-    browser.cdp.target.closeTarget newTargetId
-
-    ' Quit the browser.
-    browser.Quit
+Private Sub cmbOptions_Click()
+    ' Copy the selected text to clipboard when clicked
+    Dim DataObj As Object
+    Set DataObj = CreateObject("MSForms.DataObject")
+    DataObj.SetText cmbOptions.Value
+    DataObj.PutInClipboard
 End Sub
