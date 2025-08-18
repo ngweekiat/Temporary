@@ -157,3 +157,21 @@ Private Sub CopyTextToClipboard(sText As String)
     CloseClipboard
 End Sub
 
+
+Private Sub UserForm_Initialize()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change to your sheet name
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    With cmbOptions
+        .Clear
+        For i = 1 To lastRow
+            If ws.Cells(i, "A").Value <> "" Then
+                .AddItem ws.Cells(i, "A").Value
+            End If
+        Next i
+    End With
+End Sub
