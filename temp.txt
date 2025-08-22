@@ -334,3 +334,19 @@ Sub GetWebPageHTML()
     ' Example: print the page title
     Debug.Print HTMLDoc.getElementsByTagName("title")(0).innerText
 End Sub
+
+
+Sub GetHTMLPage_WinHTTP()
+    Dim Http As Object
+    Dim URL As String
+    Dim HTML As String
+    
+    URL = "https://www.example.com"
+    
+    Set Http = CreateObject("WinHTTP.WinHTTPRequest.5.1")
+    Http.Open "GET", URL, False
+    Http.Send
+    
+    HTML = Http.ResponseText
+    Debug.Print HTML
+End Sub
