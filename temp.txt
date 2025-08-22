@@ -297,3 +297,40 @@ Public Sub ShowFormAndMinimizeExcel()
         ShowWindow hWndXL, SW_MINIMIZE
     End If
 End Sub
+
+
+
+
+
+
+
+
+Sub GetWebPageHTML()
+    Dim Http As Object
+    Dim HTMLDoc As Object
+    Dim URL As String
+    Dim HTMLContent As String
+    
+    ' URL of the webpage
+    URL = "https://www.example.com"
+    
+    ' Create the XMLHTTP object
+    Set Http = CreateObject("MSXML2.XMLHTTP")
+    
+    ' Open a GET request
+    Http.Open "GET", URL, False
+    Http.Send
+    
+    ' Get the response text (HTML source)
+    HTMLContent = Http.ResponseText
+    
+    ' Print to Immediate Window (Ctrl+G to view in VBA editor)
+    Debug.Print HTMLContent
+    
+    ' Optionally load into an HTML document for parsing
+    Set HTMLDoc = CreateObject("HTMLFILE")
+    HTMLDoc.body.innerHTML = HTMLContent
+    
+    ' Example: print the page title
+    Debug.Print HTMLDoc.getElementsByTagName("title")(0).innerText
+End Sub
