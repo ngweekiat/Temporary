@@ -1,0 +1,409 @@
+                    <meta charset="utf-8" emacsmode="-*- markdown -*">
+                            **VBAChromeDevProtocol**
+
+VBAChromeDevProtocol is a set of Visual Basic for Applications (VBA) source files
+to allow controlling Chrome, Edge (and to a limited extent, Firefox) by using
+the browser's Chrome Developer Protocol.  This can be used to automate various
+tasks with browser.  Normally Selenium, Puppeteer, or Playwright should be used
+as these are mature software with a community to back them.  However, if you are
+unable to install additional software or simply want a self contained solution
+that doesn't require the user to install additional software then this can be an
+option.  This is primarily tested using Excel, but should be compatible with
+other applications such as Access or Outlook which also support VBA.
+
+Quick Start
+===============================================================================
+
+The basics, e.g. launch Google's site
+-------------------------------------------------------------------------------
+To use, within a Sub in a VBA module create an AutomateBrowser object, launch
+the browser to the desired page to navigate to, and then quit the browser.
+
+
+```
+Sub demo()
+    Dim browser As AutomateBrowser
+    Set browser = new_automateBrowser
+    browser.launch "https://www.google.com/"
+    Debug.Print JsonConverter.ConvertToJson(browser.cdp.browser.getWindowForTarget)
+    browser.Quit
+End Sub
+```
+
+License
+-------------------------------------------------------------------------------
+
+Primarily licensed under MIT terms, however, uses existing projects and samples
+which are licensed under 
+	[MIT](https://opensource.org/licenses/MIT), 
+	[The Code Project Open License / CPOL](http://www.codeproject.com/info/cpol10.aspx), 
+     [Creative Commons license / stack overflow](https://creativecommons.org/licenses/by-sa/4.0/)
+and 
+	[Microsoft documentation terms](https://docs.microsoft.com/en-us/legal/termsofuse)
+
+Tutorials
+===============================================================================
+
+Setup
+-------------------------------------------------------------------------------
+
+- create a new document (e.g. in Excel, new document), for browser control
+
+- in the VBA editor (development tools) copy the source modules from [here](https://github.com/PerditionC/VBAChromeDevProtocol/).
+  Be sure to copy all the files in src/ directory and needed ones from src/cdp/
+  *(The files in generator are only used to create the files in src/cdp/ and
+    the files in src/examples are not needed normally.)*
+
+  * Either do the long and arduous task of _Importing File..._ for each
+    of the source files or
+
+  * Open the src directory in Windows Explorer and drag the files to the VBA
+    modules' window in Excel
+
+    ![highlight & drag-n-drop source files to VBA Project window, modules section](dnd-files.png)
+
+- add a reference to Microsoft Scripting Runtime *needed for Dictionary*
+  (Optionally and unsupported, use alternative Dictionary class - 
+   see https://github.com/VBA-tools/VBA-Dictionary)
+
+  ![add reference to scrrun.dll](scrrun.jpg)
+
+- **save** document as addin (or macro enabled file), e.g. as "CDP Addin.xlam"
+
+- create another document, this will be your project!
+
+- add a reference to previously created file, e.g. to "CDP Addin.xlam"
+
+> &#x1F4C3; **Note:** Source files need to have DOS/Windows [\r\n] line endings
+>                  or VBA will import class modules incorrectly as modules
+>                  (i.e. if files have only \n line endings, import will fail)
+
+> &#x1F4C3; **Note:** Or use the "CDP Addings.xlam" included in the distribution
+>                     instead of recreating it.
+
+Basic Example
+-------------------------------------------------------------------------------
+
+### Minimal
+
+Minimally, you need to create an instance of the AutomateBrowser (or clsCDP)
+class and launch the browser to desired web page.  Optionally, close the browser.
+
+``` vbs
+Sub Ex_Minimal()
+    ' create an instance to our AutomateBrowser class
+    ' the module this subroutine is created in must have a reference to the
+    ' document with the VBAChromeDevProtocol source files imported into.
+    Dim browser As AutomateBrowser
+    Set browser = new_automateBrowser
+    ' start up the browser, which ever one first found of Edge, Chrome, Firefox
+    ' and pass it the command line option to load our web page on startup.
+    browser.launch "https://www.google.com/"
+    ' optionally close the browser once done
+    'browser.Quit
+End Sub
+```
+
+### Simple Interaction
+
+``` vb
+Sub Google_search()
+    ' common setup, create browser class and spawn browser
+    Dim b As AutomateBrowser: Set b = new_automateBrowser
+    b.launch
+    b.navigate "https://www.google.com"
+    
+    'find node by class
+    Dim SearchBar As cdpDOMNode
+    Set SearchBar = b.querySelector(".gLFyf.gsfi")
+    
+    'do something to/with the node; i like having the methods here vs by b.method node.nodeId, etc
+    SearchBar.elementAttribute("value") = "cats"
+    sleep 1
+    SearchBar.elementAttribute("value") = ""
+    sleep 1
+    SearchBar.elementValue = "big cats"
+    ' print out some of its properties
+    Debug.Print SearchBar.innerText
+    Debug.Print SearchBar.Title
+    Debug.Print SearchBar.Value
+    Debug.Print SearchBar.elementValue
+       
+    sleep 1
+    Dim myInputs As Dictionary
+    Dim myInput As cdpDOMNode
+    
+    'find nodes by tag
+    Set myInputs = b.querySelectorAll("input[class~='gLFyf'][class~='gsfi']")
+    Set myInput = myInputs.Items(0)
+    myInput.SetValue "tiger", SNV_FakeInput
+    
+    sleep 1 
+   
+    myInput.SetValue "lion", SNV_Clipboard
+    ' clear popup list
+    b.cdp.SimulateInput.dispatchKeyEvent "keyDown", code:="Escape", windowsVirtualKeyCode:=27
+    b.cdp.SimulateInput.dispatchKeyEvent "keyUp"
+    
+    'find a node by class name
+    'Set myInputs = b.getNodesByClassName("gLFyf gsfi")
+    'Set myInput = myInputs.Items(0)
+    myInput.elementValue = "baby cats"
+    Debug.Print myInput.elementValue
+    
+    sleep 1
+    
+    'loop through nodes to find a specific node
+    Dim v As Variant
+    For Each v In myInputs.Items
+        Set myInput = v
+        If myInput.elementAttribute("class") = "gLFyf gsfi" Then
+            myInput.SetValue "kittens"
+            Exit For
+        End If
+    Next v
+    
+    ' clear popup list
+    sleep 1 ' needed before we press escape to give time for popup to pop up
+    b.cdp.SimulateInput.dispatchKeyEvent "keyDown", code:="Escape", windowsVirtualKeyCode:=27
+    b.cdp.SimulateInput.dispatchKeyEvent "keyUp"
+    
+    'find node by exact selector path as copied from debugger
+    Dim SearchButton As cdpDOMNode
+    Set SearchButton = b.querySelector("body > div.L3eUgb > div.o3j99.ikrT4e.om7nvf > form > div:nth-child(1) > div.A8SBwf > div.FPdoLc.lJ9FBc > center > input.gNO89b")
+    SearchButton.Click
+    
+    sleep 1
+    b.alert "weeee it worked. click 'ok' to close"
+    
+    b.Quit
+End Sub
+```
+
+Reference (API)
+===============================================================================
+
+AutomateBrowser
+-------------------------------------------------------------------------------
+
+clsCDP
+-------------------------------------------------------------------------------
+
+Facades ( examples from similar tools)
+===============================================================================
+
+Pupeeter
+-------------------------------------------------------------------------------
+
+### Example for comparison
+
+From https://hacks.mozilla.org/2021/01/improving-cross-browser-testing-part-2-new-automation-features-in-firefox-nightly/
+and https://github.com/puppeteer/puppeteer/blob/main/examples/cross-browser.js
+
+#### Original
+An example (in javascript) launching firefox from puppeteer and getting an element:
+
+``` javascript
+const puppeteer = require('puppeteer');
+
+(async () => {
+  const browser = await puppeteer.launch({
+    product: 'firefox',
+  });
+
+  const page = await browser.newPage();
+  console.log(await browser.version());
+
+  await page.goto('https://news.ycombinator.com/');
+
+  // Extract articles from the page.
+  const resultsSelector = '.titlelink';
+  const links = await page.evaluate(resultsSelector => {
+    const anchors = Array.from(document.querySelectorAll(resultsSelector));
+    return anchors.map(anchor => {
+      const title = anchor.textContent.trim();
+      return `${title} - ${anchor.href}`;
+    });
+  }, resultsSelector);
+  console.log(links.join('\n'));
+
+  await browser.close();
+})();
+```
+
+#### Equivalent
+And the same example using VBAChromeDevProtocol (in VBA):
+
+``` vb
+Sub Puppeteer_Example()
+    Dim v As Variant
+    
+'   const puppeteer = require('puppeteer');
+'
+'   (async () => {
+'     const browser = await puppeteer.launch({
+'   product:     'firefox',
+'     });
+'     const page = await browser.newPage();
+    Dim browser As AutomateBrowser: Set browser = new_AutomateBrowser
+    ' !!! firefox not yet working, use Edge or Chrome
+    ' browser.launch whichBrowser:=firefox, useWebSocket:=True
+    browser.launch whichBrowser:=Chromium
+    
+'     console.log(await browser.version());
+    Dim versionInfo As Dictionary
+    Set versionInfo = browser.cdp.browser.getVersion
+    For Each v In versionInfo.Keys
+        Debug.Print v & " : " & versionInfo(v)
+    Next v
+    
+'     await page.goto('https://news.ycombinator.com/');
+    browser.navigate "https://news.ycombinator.com/"
+    
+'     // Extract articles from the page.
+'     const resultsSelector = '.titlelink';
+    Const resultsSelector = ".titlelink"
+    
+'     const links = await page.evaluate(resultsSelector => {
+    Dim links() As String
+
+'       const anchors = Array.from(document.querySelectorAll(resultsSelector));
+    Dim anchors As Dictionary
+    Set anchors = browser.querySelectorAll(resultsSelector)
+
+'       return anchors.map(anchor => {
+'         const title = anchor.textContent.trim();
+'         return `${title} - ${anchor.href}`;
+'       });
+'     }, resultsSelector);
+    Dim linkCount As Long: linkCount = 0
+    For Each v In anchors.Items
+        Dim anchor As cdpDOMNode: Set anchor = v
+        Dim title As String: title = Trim(anchor.textContent)
+        ReDim Preserve links(linkCount) As String
+        links(linkCount) = title & " - " & anchor.getPropertyValue("href")
+        linkCount = linkCount + 1
+    Next v
+    
+'     console.log(links.join('\n'));
+    Debug.Print Join(links, vbNewLine)
+
+'     await browser.close();
+'   })();
+    browser.Quit
+End Sub
+```
+
+#### Alternative
+Or same example but like original executing logic in browser context 
+
+``` vb
+Sub Puppeteer_Example_Evaluate()
+    Dim v As Variant
+    
+'   const puppeteer = require('puppeteer');
+'
+'   (async () => {
+'     const browser = await puppeteer.launch({
+'   product:     'firefox',
+'     });
+'     const page = await browser.newPage();
+    Dim browser As AutomateBrowser: Set browser = new_AutomateBrowser
+    'browser.launch whichBrowser:=firefox, useWebSocket:=True
+    browser.launch whichBrowser:=Chromium
+    
+'     console.log(await browser.version());
+    Dim versionInfo As Dictionary
+    Set versionInfo = browser.cdp.browser.getVersion
+    For Each v In versionInfo.Keys
+        Debug.Print v & " : " & versionInfo(v)
+    Next v
+    
+'     await page.goto('https://news.ycombinator.com/');
+    browser.navigate "https://news.ycombinator.com/"
+    
+'     // Extract articles from the page.
+'     const resultsSelector = '.titlelink';
+    Const resultsSelector = "'.titlelink'"
+    
+'     const links = await page.evaluate(resultsSelector => {
+'       const anchors = Array.from(document.querySelectorAll(resultsSelector));
+'       return anchors.map(anchor => {
+'         const title = anchor.textContent.trim();
+'         return `${title} - ${anchor.href}`;
+'       });
+'     }, resultsSelector);
+    Dim js As String
+    js = "resultsSelector => { " & _
+         "  const anchors = Array.from(document.querySelectorAll(resultsSelector));" & _
+         "  return anchors.map(anchor => {" & _
+         "    const title = anchor.textContent.trim();" & _
+         "    return `${title} - ${anchor.href}`;" & _
+         "  });" & _
+         "}"
+    Dim links As String
+    links = browser.jsEval("(" & js & ")(" & resultsSelector & ").join('\n');")
+    
+'     console.log(links.join('\n'));
+    Debug.Print links
+
+'     await browser.close();
+'   })();
+    browser.Quit
+End Sub
+```
+
+### Chrome Replay export
+See Puppeteer.xlsm source for implementation.  From Chrome record your actions
+and then export the JSON version (not direct Puppeteer javascript).  Then load
+the resulting JSON to excute from VBA.
+
+``` vb
+' TODO
+```
+
+Selenium Facade
+-------------------------------------------------------------------------------
+
+Related Projects 
+===============================================================================
+
+Special Thanks
+--------------
+
+* clsCDP derived from clsEdge : https://www.codeproject.com/Tips/5307593/Automate-Chrome-Edge-using-VBA - CPOL license copyright ChrisK23
+
+* JsonConverter : https://github.com/VBA-tools/VBA-JSON - MIT/BSD license copyright Ryo Yokoyama
+
+* clsProcess : https://stackoverflow.com/questions/62172551/error-with-createpipe-in-vba-office-64bit - CC BY-SA 4.0 license
+
+* basUtf8FromString : https://www.di-mgt.com.au/basUtf8FromString64.bas.html - MIT copyright David Ireland DI Management Services Pty
+
+* WinHttpCommon / clsWebSocket : https://github.com/EagleAglow/vba-websocket-class - MIT copyright EagleAglow
+
+* ClipboardUtils : https://msdn.microsoft.com/en-us/library/office/ff192913.aspx?f=255&MSPPError=-2147217396
+
+* WinWindowStyle : https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
+
+
+Other Links
+-----------
+
+* [Chrome Developer Protocol documentation](https://chromedevtools.github.io/devtools-protocol/)
+
+* [Playwright](https://playwright.dev/)
+* [Playwright-dotnet](https://github.com/microsoft/playwright-dotnet)
+
+* [Puppeteer](https://github.com/puppeteer/puppeteer)
+* [Puppeteer Sharp](https://www.puppeteersharp.com/)
+
+* [Selenium](https://www.selenium.dev/)
+* [SeleniumBasic](https://florentbr.github.io/SeleniumBasic/)
+
+* [Rod](https://github.com/go-rod/rod)
+
+* [package cdp for Go](https://github.com/mafredri/cdp)
+
+
+<script>markdeepOptions={tocStyle:'short'};</script>
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
