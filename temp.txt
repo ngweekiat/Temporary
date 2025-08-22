@@ -350,3 +350,14 @@ Sub GetHTMLPage_WinHTTP()
     HTML = Http.ResponseText
     Debug.Print HTML
 End Sub
+
+
+Sub test()
+    Dim b As AutomateBrowser
+    Set b = New_AutomateBrowser
+    b.launch whichBrowser:=Chrome, _
+             useWebSocket:=True, _
+             useExistingBrowser:=True, _
+             additionnalInlineCommands:="--user-data-dir=""C:\Temp\ChromeProfile2"""
+    b.navigate "https://www.google.com"
+End Sub
