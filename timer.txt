@@ -1,0 +1,65 @@
+Option Explicit
+
+Private Running As Boolean
+Private StartTime As Double
+Private ElapsedTime As Double
+
+' Start Button
+Private Sub btnStart_Click()
+    If Not Running Then
+        StartTime = Timer - ElapsedTime
+        Running = True
+        Me.lblTimer.Caption = "00:00:00"
+        RunStopwatch
+    End If
+End Sub
+
+' Stop Button
+Private Sub btnStop_Click()
+    Running = False
+End Sub
+
+' Reset Button
+Private Sub btnReset_Click()
+    Running = False
+    ElapsedTime = 0
+    Me.lblTimer.Caption = "00:00:00"
+End Sub
+
+' Stopwatch loop using Application.OnTime
+Private Sub RunStopwatch()
+    If Running Then
+        ElapsedTime = Timer - StartTime
+        Me.lblTimer.Caption = FormatTime(ElapsedTime)
+        Application.OnTime Now + TimeValue("00:00:01"), "UpdateStopwatch"
+    End If
+End Sub
+
+' Helper: format seconds into hh:mm:ss
+Private Function FormatTime(ByVal Seconds As Double) As String
+    Dim h As Long, m As Long, s As Long
+    h = Int(Seconds \ 3600)
+    m = Int((Seconds Mod 3600) \ 60)
+    s = Int(Seconds Mod 60)
+    FormatTime = Format(h, "00") & ":" & Format(m, "00") & ":" & Format(s, "00")
+End Function
+
+
+
+Option Explicit
+
+Public MyForm As UserForm1
+
+' Public procedure to keep stopwatch updating
+Public Sub UpdateStopwatch()
+    If Not MyForm Is Nothing Then
+        MyForm.RunStopwatch
+    End If
+End Sub
+
+' Entry point to show the stopwatch
+Sub ShowStopwatch()
+    Set MyForm = New UserForm1
+    MyForm.Show
+End Sub
+
