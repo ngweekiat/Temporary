@@ -1,0 +1,15 @@
+Sub ParseHTML()
+    Dim http As Object, doc As Object
+    Dim url As String
+    
+    url = "https://www.example.com"
+    
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", url, False
+    http.Send
+    
+    Set doc = CreateObject("HTMLFILE")
+    doc.body.innerHTML = http.ResponseText
+    
+    Debug.Print doc.getElementsByTagName("title")(0).innerText
+End Sub
