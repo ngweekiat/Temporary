@@ -2,41 +2,35 @@ Sub Edge_FullHTML_Headless_NetworkIdle()
     Dim b As AutomateBrowser
     Dim html As String
     Dim evt As Dictionary
-    Dim loadDone As Boolean, networkIdle As Boolean
 
     Set b = New_AutomateBrowser
 
-    ' Launch Edge headless
+    ' Launch Edge in headless mode
     b.launch whichBrowser:=browserType.Edge, _
              additionnalInlineCommands:="--headless=new --disable-gpu", _
              killWithoutAsking:=True
 
-    ' Enable Page domain and lifecycle events
+    ' Enable Page domain + lifecycle events
     b.cdp.Page.enable
     b.cdp.Page.setLifecycleEventsEnabled True
 
-    ' Navigate to target URL
+    ' Navigate to target page
     b.cdp.Page.navigate "https://www.google.com/"
 
-    ' Wait loop: require both loadEventFired AND lifecycleEvent=networkIdle
-    Do While Not (loadDone And networkIdle)
+    ' Wait until we see a lifecycleEvent with name=networkIdle
+    Do
         Set evt = b.cdp.peakMessage
         If Not evt Is Nothing Then
             If evt.Exists("method") Then
-                Select Case evt("method")
-                    Case "Page.loadEventFired"
-                        loadDone = True
-                    Case "Page.lifecycleEvent"
-                        If evt("params")("name") = "networkIdle" Then
-                            networkIdle = True
-                        End If
-                End Select
+                If evt("method") = "Page.lifecycleEvent" Then
+                    If evt("params")("name") = "networkIdle" Then Exit Do
+                End If
             End If
         End If
         DoEvents
     Loop
 
-    ' Now the page is fully loaded and network quiet
+    ' At this point network is idle, grab the HTML
     html = CStr(b.jsEval("document.documentElement.outerHTML"))
     Debug.Print html
 
