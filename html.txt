@@ -1,15 +1,21 @@
-Function ExtractDirectText(ByVal html As String, ByVal cssSelector As String) As String
-    Dim htmlDoc As Object, elem As Object, child As Object
+Option Explicit
+
+' Late binding version (no reference needed)
+Function ExtractSmallQuiet(ByVal html As String) As String
+    Dim htmlDoc As Object
+    Dim elem As Object
+    
+    ' Load into HTML parser
     Set htmlDoc = CreateObject("HTMLFILE")
     htmlDoc.body.innerHTML = html
     
-    Set elem = htmlDoc.querySelector(cssSelector)
-    If elem Is Nothing Then Exit Function
+    ' Grab the span with class="small quiet"
+    Set elem = htmlDoc.querySelector("span.small.quiet")
     
-    For Each child In elem.childNodes
-        If child.nodeType = 3 Then ' text node
-            ExtractDirectText = Trim(child.nodeValue)
-            Exit Function
-        End If
-    Next
+    If Not elem Is Nothing Then
+        ' InnerText → just the human-readable text
+        ExtractSmallQuiet = elem.innerText
+    Else
+        ExtractSmallQuiet = vbNullString
+    End If
 End Function
