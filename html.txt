@@ -1,4 +1,4 @@
-Function ExtractDirectText(ByVal html As String, ByVal cssSelector As String) As String
+Function ExtractFirstTextNode(ByVal html As String, ByVal cssSelector As String) As String
     Dim htmlDoc As Object
     Dim elem As Object
     Dim child As Object
@@ -9,14 +9,11 @@ Function ExtractDirectText(ByVal html As String, ByVal cssSelector As String) As
     Set elem = htmlDoc.querySelector(cssSelector)
     
     If Not elem Is Nothing Then
-        ' Loop children, pick only text nodes (nodeType = 3)
         For Each child In elem.childNodes
-            If child.nodeType = 3 Then  ' text node
-                ExtractDirectText = Trim(child.nodeValue)
-                Exit Function
+            If child.nodeType = 3 Then  ' TEXT_NODE
+                ExtractFirstTextNode = Trim(child.nodeValue)
+                Exit Function           ' stop immediately on first
             End If
-        Next
+        Next child
     End If
-    
-    ExtractDirectText = vbNullString
 End Function
