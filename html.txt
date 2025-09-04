@@ -1,7 +1,4 @@
-Option Explicit
-
-' Extract only the text node, excluding child tags like <a>
-Function ExtractElementPlainText(ByVal html As String, ByVal cssSelector As String) As String
+Function ExtractFirstTextNode(ByVal html As String, ByVal cssSelector As String) As String
     Dim htmlDoc As Object
     Dim elem As Object
     
@@ -9,15 +6,13 @@ Function ExtractElementPlainText(ByVal html As String, ByVal cssSelector As Stri
     htmlDoc.body.innerHTML = html
     
     Set elem = htmlDoc.querySelector(cssSelector)
-    
     If Not elem Is Nothing Then
-        ' ChildNodes(0) should be the raw text node before the <a>
-        If elem.childNodes.Length > 0 Then
-            ExtractElementPlainText = Trim(elem.childNodes(0).nodeValue)
+        If elem.firstChild.nodeType = 3 Then  ' 3 = text node
+            ExtractFirstTextNode = Trim(elem.firstChild.nodeValue)
         Else
-            ExtractElementPlainText = vbNullString
+            ExtractFirstTextNode = vbNullString
         End If
     Else
-        ExtractElementPlainText = vbNullString
+        ExtractFirstTextNode = vbNullString
     End If
 End Function
