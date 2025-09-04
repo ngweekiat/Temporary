@@ -1,12 +1,16 @@
-Sub OpenEmailTemplate()
+Sub OpenMsgTemplate()
     Dim OutApp As Object
-    Dim OutMail As Object
-    Dim TemplatePath As String
+    Dim msgPath As String
     
-    TemplatePath = "C:\Templates\Welcome.oft"   ' <-- your template path
+    ' Build relative path: ParentFolder/Automation/YourTemplate.msg
+    msgPath = ThisWorkbook.Path & "\Automation\YourTemplate.msg"
     
+    ' Create Outlook object
     Set OutApp = CreateObject("Outlook.Application")
-    Set OutMail = OutApp.CreateItemFromTemplate(TemplatePath)
     
-    OutMail.Display   ' shows the template in Outlook
+    ' Open the .msg file (like double-clicking it in Explorer)
+    OutApp.Session.OpenSharedItem msgPath
+    
+    ' Clean up
+    Set OutApp = Nothing
 End Sub
