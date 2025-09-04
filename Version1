@@ -1,46 +1,53 @@
 Option Explicit
 
-Sub Edge_DumpHTML_OnFirstDocUpdated()
+Sub Edge_DumpHTML_WaitUntilIdle()
     Dim b As AutomateBrowser
     Dim msg As Dictionary
     Dim html As String
+    Dim lastEventTime As Date
+    Dim idleThresholdSeconds As Long
+    Dim overallTimeout As Long
     Dim start As Date
-    Dim timeoutSeconds As Long
     
     Set b = New_AutomateBrowser
     
-    ' Launch Edge
+    ' Launch Edge (background headless optional)
     b.launch whichBrowser:=browserType.Edge, _
              url:="https://en.wikipedia.org/wiki/Kitten", _
              killWithoutAsking:=True
     
-    ' Enable DOM + Page domain so events are raised
+    ' Enable domains so events fire
     b.cdp.Page.enable
     b.cdp.DOM.enable
+    b.cdp.Network.enable
+    b.cdp.Runtime.enable
     
-    ' Wait until the FIRST DOM.documentUpdated event
-    timeoutSeconds = 20
+    idleThresholdSeconds = 2   ' consider idle after 2s of no events
+    overallTimeout = 20        ' hard stop after 20s
     start = Now
+    lastEventTime = Now
     
     Do
-        ' Fill event queue
-        b.cdp.peakMessage
-        
-        ' Read one from queue
-        Set msg = b.cdp.popMessageFromQueue
+        Set msg = b.cdp.peakMessage
         If Not msg Is Nothing Then
             If msg.Exists("method") Then
-                If msg("method") = "DOM.documentUpdated" Then
-                    Debug.Print "DETECTED: DOM.documentUpdated"
-                    Exit Do
-                End If
+                Debug.Print "Event: " & msg("method")
+                lastEventTime = Now
             End If
         End If
         
-        If DateDiff("s", start, Now) > timeoutSeconds Then
-            Debug.Print "TIMEOUT: no DOM.documentUpdated detected"
+        ' if no events for idleThresholdSeconds → stop
+        If DateDiff("s", lastEventTime, Now) >= idleThresholdSeconds Then
+            Debug.Print "No events for " & idleThresholdSeconds & "s → stopping"
             Exit Do
         End If
+        
+        ' safety timeout
+        If DateDiff("s", start, Now) >= overallTimeout Then
+            Debug.Print "Overall timeout → stopping"
+            Exit Do
+        End If
+        
         DoEvents
     Loop
     
