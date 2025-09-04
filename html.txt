@@ -1,27 +1,16 @@
-Option Explicit
-
-Sub Edge_DumpHTML()
+Sub Edge_FullHTML()
     Dim b As AutomateBrowser
     Dim html As String
-    Dim v As Variant
 
     Set b = New_AutomateBrowser
-
-    ' Launch Microsoft Edge and go to a page (change URL if you want)
     b.launch whichBrowser:=browserType.Edge, url:="https://www.google.com/", killWithoutAsking:=True
 
-    ' === Method 1: via JS (simple & robust) ===
-    ' Grab the full page HTML: <html>…</html>
-    v = b.jsEval("document.documentElement.outerHTML")
-    html = CStr(v)
+    ' Wait for page scripts to run (adjust if needed)
+    Application.Wait (Now + TimeValue("0:00:05"))
 
-    Debug.Print html   ' prints full HTML to Immediate window (Ctrl+G to view)
-
-    ' Optional: also save to a file on Desktop
-    'Dim f As Integer: f = FreeFile
-    'Open Environ$("USERPROFILE") & "\Desktop\page_dump.html" For Output As #f
-    'Print #f, html
-    'Close #f
+    ' Grab full DOM
+    html = CStr(b.jsEval("document.documentElement.outerHTML"))
+    Debug.Print html
 
     b.Quit
 End Sub
