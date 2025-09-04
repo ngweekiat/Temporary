@@ -1,65 +1,51 @@
 Option Explicit
 
-Private Running As Boolean
-Private StartTime As Double
-Private ElapsedTime As Double
-
-' Start Button
-Private Sub btnStart_Click()
-    If Not Running Then
-        StartTime = Timer - ElapsedTime
-        Running = True
-        Me.lblTimer.Caption = "00:00:00"
-        RunStopwatch
-    End If
+Sub Edge_LogAllCDPEvents()
+    Dim b As AutomateBrowser
+    Dim msg As Dictionary
+    Dim start As Date
+    Dim timeoutSeconds As Long
+    
+    Set b = New_AutomateBrowser
+    
+    ' Launch Edge (headless optional, here normal window so you can see it)
+    b.launch whichBrowser:=browserType.Edge, _
+             url:="https://en.wikipedia.org/wiki/Kitten", _
+             killWithoutAsking:=True
+    
+    ' Enable the domains we want to see events from
+    b.cdp.Page.enable
+    b.cdp.DOM.enable
+    b.cdp.Runtime.enable
+    b.cdp.Network.enable
+    b.cdp.Target.setDiscoverTargets True
+    
+    timeoutSeconds = 20
+    start = Now
+    
+    Do While DateDiff("s", start, Now) < timeoutSeconds
+        ' Step 1: pull in any new events
+        b.cdp.peakMessage
+        
+        ' Step 2: pop and log all queued messages
+        Do
+            Set msg = b.cdp.popMessageFromQueue
+            If msg Is Nothing Then Exit Do
+            
+            ' Pretty print the event/response
+            If msg.Exists("method") Then
+                Debug.Print "Event: " & msg("method")
+            ElseIf msg.Exists("id") Then
+                Debug.Print "Response to id=" & msg("id")
+            Else
+                Debug.Print "Message: " & JsonConverter.ConvertToJson(msg)
+            End If
+        Loop
+        
+        DoEvents
+    Loop
+    
+    Debug.Print "=== Done logging events ==="
+    
+    b.Quit
 End Sub
-
-' Stop Button
-Private Sub btnStop_Click()
-    Running = False
-End Sub
-
-' Reset Button
-Private Sub btnReset_Click()
-    Running = False
-    ElapsedTime = 0
-    Me.lblTimer.Caption = "00:00:00"
-End Sub
-
-' Stopwatch loop using Application.OnTime
-Private Sub RunStopwatch()
-    If Running Then
-        ElapsedTime = Timer - StartTime
-        Me.lblTimer.Caption = FormatTime(ElapsedTime)
-        Application.OnTime Now + TimeValue("00:00:01"), "UpdateStopwatch"
-    End If
-End Sub
-
-' Helper: format seconds into hh:mm:ss
-Private Function FormatTime(ByVal Seconds As Double) As String
-    Dim h As Long, m As Long, s As Long
-    h = Int(Seconds \ 3600)
-    m = Int((Seconds Mod 3600) \ 60)
-    s = Int(Seconds Mod 60)
-    FormatTime = Format(h, "00") & ":" & Format(m, "00") & ":" & Format(s, "00")
-End Function
-
-
-
-Option Explicit
-
-Public MyForm As UserForm1
-
-' Public procedure to keep stopwatch updating
-Public Sub UpdateStopwatch()
-    If Not MyForm Is Nothing Then
-        MyForm.RunStopwatch
-    End If
-End Sub
-
-' Entry point to show the stopwatch
-Sub ShowStopwatch()
-    Set MyForm = New UserForm1
-    MyForm.Show
-End Sub
-
