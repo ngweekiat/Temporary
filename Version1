@@ -1,0 +1,52 @@
+Option Explicit
+
+Sub Edge_DumpHTML_OnFirstDocUpdated()
+    Dim b As AutomateBrowser
+    Dim msg As Dictionary
+    Dim html As String
+    Dim start As Date
+    Dim timeoutSeconds As Long
+    
+    Set b = New_AutomateBrowser
+    
+    ' Launch Edge
+    b.launch whichBrowser:=browserType.Edge, _
+             url:="https://en.wikipedia.org/wiki/Kitten", _
+             killWithoutAsking:=True
+    
+    ' Enable DOM + Page domain so events are raised
+    b.cdp.Page.enable
+    b.cdp.DOM.enable
+    
+    ' Wait until the FIRST DOM.documentUpdated event
+    timeoutSeconds = 20
+    start = Now
+    
+    Do
+        ' Fill event queue
+        b.cdp.peakMessage
+        
+        ' Read one from queue
+        Set msg = b.cdp.popMessageFromQueue
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "DOM.documentUpdated" Then
+                    Debug.Print "DETECTED: DOM.documentUpdated"
+                    Exit Do
+                End If
+            End If
+        End If
+        
+        If DateDiff("s", start, Now) > timeoutSeconds Then
+            Debug.Print "TIMEOUT: no DOM.documentUpdated detected"
+            Exit Do
+        End If
+        DoEvents
+    Loop
+    
+    ' Dump HTML snapshot
+    html = CStr(b.jsEval("document.documentElement.outerHTML"))
+    Debug.Print "HTML length = " & Len(html)
+    
+    b.Quit
+End Sub
