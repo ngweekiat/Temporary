@@ -1,0 +1,32 @@
+Option Explicit
+
+Sub ExtractAndPrintElement()
+    Dim b As AutomateBrowser
+    Dim html As String
+    Dim result As String
+    
+    ' Launch Edge and navigate
+    Set b = New_AutomateBrowser
+    b.launch whichBrowser:=browserType.Edge, _
+             url:="https://en.wikipedia.org/wiki/Kitten", _
+             killWithoutAsking:=True
+    
+    ' Wait a bit for the page to load (simplest way)
+    Application.Wait (Now + TimeValue("0:00:05"))
+    
+    ' Grab the page HTML
+    html = CStr(b.jsEval("document.documentElement.outerHTML"))
+    
+    ' Quit the browser
+    b.Quit
+    
+    ' Extract element by CSS selector
+    result = ExtractElementText(html, "#toolbar span.small.quiet")
+    
+    ' Print result
+    If result <> vbNullString Then
+        Debug.Print "Extracted text: " & result
+    Else
+        Debug.Print "No element found for selector."
+    End If
+End Sub
