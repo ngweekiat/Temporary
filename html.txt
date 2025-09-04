@@ -19,3 +19,9 @@ Function ExtractSmallQuiet(ByVal html As String) As String
         ExtractSmallQuiet = vbNullString
     End If
 End Function
+
+
+    b.launch whichBrowser:=browserType.Edge, _
+             url:="https://www.google.com/", _
+             additionnalInlineCommands:="--headless=new --disable-gpu", _
+             killWithoutAsking:=True
