@@ -1,20 +1,19 @@
-Function ExtractSpanTextOnly(ByVal html As String, ByVal cssSelector As String) As String
+Function ExtractFirstTextOnly(ByVal html As String, ByVal cssSelector As String) As String
     Dim htmlDoc As Object
     Dim elem As Object
-    Dim txt As String
+    Dim node As Object
     
     Set htmlDoc = CreateObject("HTMLFILE")
     htmlDoc.body.innerHTML = html
     
     Set elem = htmlDoc.querySelector(cssSelector)
-    If Not elem Is Nothing Then
-        txt = elem.innerText
-        ' Remove anything in parentheses
-        If InStr(txt, "(") > 0 Then
-            txt = Left(txt, InStr(txt, "(") - 1)
+    If elem Is Nothing Then Exit Function
+    
+    ' Loop through direct child nodes
+    For Each node In elem.childNodes
+        If node.nodeType = 3 Then ' 3 = text node
+            ExtractFirstTextOnly = Trim(node.nodeValue)
+            Exit Function
         End If
-        ExtractSpanTextOnly = Trim(txt)
-    Else
-        ExtractSpanTextOnly = vbNullString
-    End If
+    Next
 End Function
