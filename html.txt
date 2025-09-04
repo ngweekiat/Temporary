@@ -1,20 +1,23 @@
 Option Explicit
 
-Function ExtractElementText(ByVal html As String, ByVal cssSelector As String) As String
-    Dim htmlDoc As Object   ' MSHTML.HTMLDocument
+' Extract only the text node, excluding child tags like <a>
+Function ExtractElementPlainText(ByVal html As String, ByVal cssSelector As String) As String
+    Dim htmlDoc As Object
     Dim elem As Object
     
-    ' Create HTML parser
     Set htmlDoc = CreateObject("HTMLFILE")
-    htmlDoc.write html
-    htmlDoc.Close
+    htmlDoc.body.innerHTML = html
     
-    ' Query only the element you want
     Set elem = htmlDoc.querySelector(cssSelector)
     
     If Not elem Is Nothing Then
-        ExtractElementText = Trim(elem.innerText)   ' <-- only the contents of that span
+        ' ChildNodes(0) should be the raw text node before the <a>
+        If elem.childNodes.Length > 0 Then
+            ExtractElementPlainText = Trim(elem.childNodes(0).nodeValue)
+        Else
+            ExtractElementPlainText = vbNullString
+        End If
     Else
-        ExtractElementText = vbNullString
+        ExtractElementPlainText = vbNullString
     End If
 End Function
