@@ -1,19 +1,31 @@
-Sub Edge_FullHTML_Headless()
+Sub Edge_FullHTML_Headless_Wait()
     Dim b As AutomateBrowser
     Dim html As String
+    Dim evt As Dictionary
 
     Set b = New_AutomateBrowser
 
     ' Launch Edge headless
     b.launch whichBrowser:=browserType.Edge, _
-             url:="https://www.google.com/", _
              additionnalInlineCommands:="--headless=new --disable-gpu", _
              killWithoutAsking:=True
 
-    ' Wait a bit for page to render
-    Application.Wait (Now + TimeValue("0:00:05"))
+    ' Enable Page domain and navigate
+    b.cdp.Page.enable
+    b.cdp.Page.navigate "https://www.google.com/"
 
-    ' Grab full HTML
+    ' Block until load event is fired
+    Do
+        Set evt = b.cdp.peakMessage
+        If Not evt Is Nothing Then
+            If evt.Exists("method") Then
+                If evt("method") = "Page.loadEventFired" Then Exit Do
+            End If
+        End If
+        DoEvents
+    Loop
+
+    ' Now the DOM should be complete – grab full HTML
     html = CStr(b.jsEval("document.documentElement.outerHTML"))
     Debug.Print html
 
