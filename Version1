@@ -1,64 +1,57 @@
 Option Explicit
 
-Sub Edge_DumpHTML_WhenIdle()
+Sub Edge_LogAllCDPEvents_AndDumpHTML()
     Dim b As AutomateBrowser
     Dim msg As Dictionary
-    Dim html As String
-    Dim lastEventTime As Date
-    Dim idleThresholdSeconds As Double
-    Dim maxWaitSeconds As Long
     Dim start As Date
+    Dim timeoutSeconds As Long
+    Dim html As String
     
     Set b = New_AutomateBrowser
     
-    ' Launch Edge (headless optional)
+    ' Launch Edge (headless optional; remove the inline commands to see window)
     b.launch whichBrowser:=browserType.Edge, _
              url:="https://en.wikipedia.org/wiki/Kitten", _
              killWithoutAsking:=True
     
-    ' Enable domains that generate load events
+    ' Enable the domains we want to see events from
     b.cdp.Page.enable
     b.cdp.DOM.enable
     b.cdp.Runtime.enable
     b.cdp.Network.enable
+    b.cdp.Target.setDiscoverTargets True
     
-    ' idle detection parameters
-    idleThresholdSeconds = 2     ' consider "done" if 2s pass without events
-    maxWaitSeconds = 20          ' safety timeout
+    timeoutSeconds = 20
     start = Now
-    lastEventTime = Now
     
-    Do
-        ' pull in new events
+    Do While DateDiff("s", start, Now) < timeoutSeconds
+        ' Step 1: pull in any new events
         b.cdp.peakMessage
         
-        ' process queue (if any)
-        Set msg = b.cdp.popMessageFromQueue
-        If Not msg Is Nothing Then
-            lastEventTime = Now   ' reset idle timer when something arrives
+        ' Step 2: pop and log all queued messages
+        Do
+            Set msg = b.cdp.popMessageFromQueue
+            If msg Is Nothing Then Exit Do
             
+            ' Pretty print the event/response
             If msg.Exists("method") Then
                 Debug.Print "Event: " & msg("method")
+            ElseIf msg.Exists("id") Then
+                Debug.Print "Response to id=" & msg("id")
+            Else
+                Debug.Print "Message: " & JsonConverter.ConvertToJson(msg)
             End If
-        End If
-        
-        ' stop if idle long enough
-        If DateDiff("s", lastEventTime, Now) >= idleThresholdSeconds Then
-            Debug.Print "No events for " & idleThresholdSeconds & "s — assuming page is idle"
-            Exit Do
-        End If
-        
-        ' stop if hard timeout
-        If DateDiff("s", start, Now) >= maxWaitSeconds Then
-            Debug.Print "Timeout: gave up after " & maxWaitSeconds & "s"
-            Exit Do
-        End If
+        Loop
         
         DoEvents
     Loop
     
-    ' Dump HTML snapshot
+    Debug.Print "=== Done logging events ==="
+    
+    ' Grab HTML snapshot after logging
     html = CStr(b.jsEval("document.documentElement.outerHTML"))
+    Debug.Print "=== HTML Snapshot ==="
+    Debug.Print html
     Debug.Print "HTML length = " & Len(html)
     
     b.Quit
