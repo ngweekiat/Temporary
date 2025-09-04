@@ -1,0 +1,12 @@
+Sub OpenEmailTemplate()
+    Dim OutApp As Object
+    Dim OutMail As Object
+    Dim TemplatePath As String
+    
+    TemplatePath = "C:\Templates\Welcome.oft"   ' <-- your template path
+    
+    Set OutApp = CreateObject("Outlook.Application")
+    Set OutMail = OutApp.CreateItemFromTemplate(TemplatePath)
+    
+    OutMail.Display   ' shows the template in Outlook
+End Sub
