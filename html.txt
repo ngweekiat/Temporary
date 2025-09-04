@@ -1,38 +1,49 @@
-Sub Edge_FullHTML_Headless_NetworkIdle()
+Option Explicit
+
+Sub Edge_DumpHTML_OnFirstFrameStopped()
     Dim b As AutomateBrowser
+    Dim msg As Dictionary
     Dim html As String
-    Dim evt As Dictionary
-
+    Dim start As Date
+    Dim timeoutSeconds As Long
+    
     Set b = New_AutomateBrowser
-
-    ' Launch Edge in headless mode
+    
     b.launch whichBrowser:=browserType.Edge, _
-             additionnalInlineCommands:="--headless=new --disable-gpu", _
+             url:="https://en.wikipedia.org/wiki/Kitten", _
              killWithoutAsking:=True
-
-    ' Enable Page domain + lifecycle events
+    
     b.cdp.Page.enable
-    b.cdp.Page.setLifecycleEventsEnabled True
-
-    ' Navigate to target page
-    b.cdp.Page.navigate "https://www.google.com/"
-
-    ' Wait until we see a lifecycleEvent with name=networkIdle
+    
+    timeoutSeconds = 20
+    start = Now
+    
     Do
-        Set evt = b.cdp.peakMessage
-        If Not evt Is Nothing Then
-            If evt.Exists("method") Then
-                If evt("method") = "Page.lifecycleEvent" Then
-                    If evt("params")("name") = "networkIdle" Then Exit Do
+        ' fill event queue
+        b.cdp.peakMessage
+        
+        ' read one from queue
+        Set msg = b.cdp.popMessageFromQueue
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "Page.frameStoppedLoading" Then
+                    Debug.Print "DETECTED: Page.frameStoppedLoading"
+                    Exit Do
                 End If
             End If
         End If
+        
+        If DateDiff("s", start, Now) > timeoutSeconds Then
+            Debug.Print "TIMEOUT: no frameStoppedLoading detected"
+            Exit Do
+        End If
         DoEvents
     Loop
-
-    ' At this point network is idle, grab the HTML
+    
     html = CStr(b.jsEval("document.documentElement.outerHTML"))
-    Debug.Print html
-
+    Debug.Print "HTML length = " & Len(html)
+    Debug.Print (html)
     b.Quit
 End Sub
+
+

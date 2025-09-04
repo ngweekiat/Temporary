@@ -1,363 +1,49 @@
 Option Explicit
 
-#If VBA7 Then
-    Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
-        (ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
-
-    Private Declare PtrSafe Function SetWindowPos Lib "user32" _
-        (ByVal hwnd As LongPtr, ByVal hWndInsertAfter As LongPtr, _
-        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
-        ByVal wFlags As Long) As Long
-
-    Private Declare PtrSafe Function GetForegroundWindow Lib "user32" () As LongPtr
-#Else
-    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" _
-        (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
-
-    Private Declare Function SetWindowPos Lib "user32" _
-        (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, _
-        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
-        ByVal wFlags As Long) As Long
-
-    Private Declare Function GetForegroundWindow Lib "user32" () As Long
-#End If
-
-Private Const SWP_NOSIZE As Long = &H1
-Private Const SWP_NOMOVE As Long = &H2
-Private Const SWP_NOACTIVATE As Long = &H10
-Private Const HWND_TOPMOST As Long = -1
-
-Private Sub UserForm_Initialize()
-    ' Populate dropdown with options
-    With cmbOptions
-        .AddItem "Option 1"
-        .AddItem "Option 2"
-        .AddItem "Option 3"
-    End With
-End Sub
-
-Private Sub UserForm_Activate()
-    ' Keep form always on top
-    Dim hWndForm As LongPtr
-    hWndForm = FindWindow(vbNullString, Me.Caption)
-    SetWindowPos hWndForm, HWND_TOPMOST, 0, 0, 0, 0, _
-                 SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE
-End Sub
-
-Private Sub cmbOptions_Click()
-    ' Copy selected item to clipboard
-    Dim DataObj As Object
-    Set DataObj = CreateObject("MSForms.DataObject")
-    DataObj.SetText cmbOptions.Value
-    DataObj.PutInClipboard
-End Sub
-
-
-Sub ShowClipboardTool()
-    frmClipboardTool.Show vbModeless
-End Sub
-
-
-
-
-Option Explicit
-
-#If VBA7 Then
-    Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
-        (ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
-
-    Private Declare PtrSafe Function SetWindowPos Lib "user32" _
-        (ByVal hwnd As LongPtr, ByVal hWndInsertAfter As LongPtr, _
-        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
-        ByVal wFlags As Long) As Long
-
-    Private Declare PtrSafe Function OpenClipboard Lib "user32" (ByVal hwnd As LongPtr) As Long
-    Private Declare PtrSafe Function EmptyClipboard Lib "user32" () As Long
-    Private Declare PtrSafe Function CloseClipboard Lib "user32" () As Long
-    Private Declare PtrSafe Function GlobalAlloc Lib "kernel32" (ByVal wFlags As Long, ByVal dwBytes As LongPtr) As LongPtr
-    Private Declare PtrSafe Function GlobalLock Lib "kernel32" (ByVal hMem As LongPtr) As LongPtr
-    Private Declare PtrSafe Function GlobalUnlock Lib "kernel32" (ByVal hMem As LongPtr) As Long
-    Private Declare PtrSafe Function lstrcpy Lib "kernel32" (ByVal lpString1 As Any, ByVal lpString2 As Any) As LongPtr
-    Private Declare PtrSafe Function SetClipboardData Lib "user32" (ByVal wFormat As Long, ByVal hMem As LongPtr) As LongPtr
-#Else
-    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" _
-        (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
-
-    Private Declare Function SetWindowPos Lib "user32" _
-        (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, _
-        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
-        ByVal wFlags As Long) As Long
-
-    Private Declare Function OpenClipboard Lib "user32" (ByVal hwnd As Long) As Long
-    Private Declare Function EmptyClipboard Lib "user32" () As Long
-    Private Declare Function CloseClipboard Lib "user32" () As Long
-    Private Declare Function GlobalAlloc Lib "kernel32" (ByVal wFlags As Long, ByVal dwBytes As Long) As Long
-    Private Declare Function GlobalLock Lib "kernel32" (ByVal hMem As Long) As Long
-    Private Declare Function GlobalUnlock Lib "kernel32" (ByVal hMem As Long) As Long
-    Private Declare Function lstrcpy Lib "kernel32" (ByVal lpString1 As Any, ByVal lpString2 As Any) As Long
-    Private Declare Function SetClipboardData Lib "user32" (ByVal wFormat As Long, ByVal hMem As Long) As Long
-#End If
-
-Private Const SWP_NOSIZE As Long = &H1
-Private Const SWP_NOMOVE As Long = &H2
-Private Const SWP_NOACTIVATE As Long = &H10
-Private Const HWND_TOPMOST As Long = -1
-Private Const GMEM_MOVEABLE As Long = &H2
-Private Const CF_TEXT As Long = 1
-
-'-----------------------------
-' Initialize the dropdown
-'-----------------------------
-Private Sub UserForm_Initialize()
-    With cmbOptions
-        .AddItem "Option 1"
-        .AddItem "Option 2"
-        .AddItem "Option 3"
-    End With
-End Sub
-
-'-----------------------------
-' Keep form always on top
-'-----------------------------
-Private Sub UserForm_Activate()
-    Dim hWndForm As LongPtr
-    hWndForm = FindWindow(vbNullString, Me.Caption)
-    SetWindowPos hWndForm, HWND_TOPMOST, 0, 0, 0, 0, _
-                 SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE
-End Sub
-
-'-----------------------------
-' Copy selected text to clipboard
-'-----------------------------
-Private Sub cmbOptions_Click()
-    If cmbOptions.ListIndex >= 0 Then
-        CopyTextToClipboard cmbOptions.Value
-    End If
-End Sub
-
-'-----------------------------
-' API function to copy text
-'-----------------------------
-Private Sub CopyTextToClipboard(sText As String)
-    Dim hGlobal As LongPtr
-    Dim lpGlobal As LongPtr
-    
-    OpenClipboard 0
-    EmptyClipboard
-    
-    hGlobal = GlobalAlloc(GMEM_MOVEABLE, Len(sText) + 1)
-    lpGlobal = GlobalLock(hGlobal)
-    
-    If lpGlobal <> 0 Then
-        lstrcpy ByVal lpGlobal, ByVal sText
-        GlobalUnlock hGlobal
-        SetClipboardData CF_TEXT, hGlobal
-    End If
-    
-    CloseClipboard
-End Sub
-
-
-
-Sub ShowFormAndMinimizeExcel()
-    Dim hWndXL As LongPtr
-    ' Get handle to Excel window
-    hWndXL = FindWindowA("XLMAIN", Application.Caption)
-    
-    ' Show the UserForm
-    UserForm1.Show vbModeless
-    
-    ' Minimize Excel
-    ShowWindow hWndXL, SW_MINIMIZE
-End Sub
-
-
-
-Option Explicit
-
-#If VBA7 Then
-    Private Declare PtrSafe Function FindWindow Lib "user32" Alias "FindWindowA" _
-        (ByVal lpClassName As String, ByVal lpWindowName As String) As LongPtr
-
-    Private Declare PtrSafe Function SetWindowPos Lib "user32" _
-        (ByVal hwnd As LongPtr, ByVal hWndInsertAfter As LongPtr, _
-        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
-        ByVal wFlags As Long) As Long
-
-    ' NEW: minimize Excel window
-    Private Declare PtrSafe Function ShowWindow Lib "user32" ( _
-        ByVal hwnd As LongPtr, ByVal nCmdShow As Long) As Long
-
-    Private Declare PtrSafe Function OpenClipboard Lib "user32" (ByVal hwnd As LongPtr) As Long
-    Private Declare PtrSafe Function EmptyClipboard Lib "user32" () As Long
-    Private Declare PtrSafe Function CloseClipboard Lib "user32" () As Long
-    Private Declare PtrSafe Function GlobalAlloc Lib "kernel32" (ByVal wFlags As Long, ByVal dwBytes As LongPtr) As LongPtr
-    Private Declare PtrSafe Function GlobalLock Lib "kernel32" (ByVal hMem As LongPtr) As LongPtr
-    Private Declare PtrSafe Function GlobalUnlock Lib "kernel32" (ByVal hMem As LongPtr) As Long
-    Private Declare PtrSafe Function lstrcpy Lib "kernel32" (ByVal lpString1 As Any, ByVal lpString2 As Any) As LongPtr
-    Private Declare PtrSafe Function SetClipboardData Lib "user32" (ByVal wFormat As Long, ByVal hMem As LongPtr) As LongPtr
-#Else
-    Private Declare Function FindWindow Lib "user32" Alias "FindWindowA" _
-        (ByVal lpClassName As String, ByVal lpWindowName As String) As Long
-
-    Private Declare Function SetWindowPos Lib "user32" _
-        (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, _
-        ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
-        ByVal wFlags As Long) As Long
-
-    ' NEW: minimize Excel window
-    Private Declare Function ShowWindow Lib "user32" ( _
-        ByVal hwnd As Long, ByVal nCmdShow As Long) As Long
-
-    Private Declare Function OpenClipboard Lib "user32" (ByVal hwnd As Long) As Long
-    Private Declare Function EmptyClipboard Lib "user32" () As Long
-    Private Declare Function CloseClipboard Lib "user32" () As Long
-    Private Declare Function GlobalAlloc Lib "kernel32" (ByVal wFlags As Long, ByVal dwBytes As Long) As Long
-    Private Declare Function GlobalLock Lib "kernel32" (ByVal hMem As Long) As Long
-    Private Declare Function GlobalUnlock Lib "kernel32" (ByVal hMem As Long) As Long
-    Private Declare Function lstrcpy Lib "kernel32" (ByVal lpString1 As Any, ByVal lpString2 As Any) As Long
-    Private Declare Function SetClipboardData Lib "user32" (ByVal wFormat As Long, ByVal hMem As Long) As Long
-#End If
-
-Private Const SWP_NOSIZE As Long = &H1
-Private Const SWP_NOMOVE As Long = &H2
-Private Const SWP_NOACTIVATE As Long = &H10
-Private Const HWND_TOPMOST As Long = -1
-Private Const GMEM_MOVEABLE As Long = &H2
-Private Const CF_TEXT As Long = 1
-
-' NEW:
-Private Const SW_MINIMIZE As Long = 6
-
-'-----------------------------
-' Initialize the dropdown
-'-----------------------------
-Private Sub UserForm_Initialize()
-    With cmbOptions
-        .AddItem "Option 1"
-        .AddItem "Option 2"
-        .AddItem "Option 3"
-    End With
-End Sub
-
-'-----------------------------
-' Keep form always on top
-'-----------------------------
-Private Sub UserForm_Activate()
-    Dim hWndForm As LongPtr
-    hWndForm = FindWindow(vbNullString, Me.Caption)
-    SetWindowPos hWndForm, HWND_TOPMOST, 0, 0, 0, 0, _
-                 SWP_NOMOVE Or SWP_NOSIZE Or SWP_NOACTIVATE
-End Sub
-
-'-----------------------------
-' Copy selected text to clipboard
-'-----------------------------
-Private Sub cmbOptions_Click()
-    If cmbOptions.ListIndex >= 0 Then
-        CopyTextToClipboard cmbOptions.Value
-    End If
-End Sub
-
-'-----------------------------
-' API function to copy text
-'-----------------------------
-Private Sub CopyTextToClipboard(sText As String)
-    Dim hGlobal As LongPtr
-    Dim lpGlobal As LongPtr
-    
-    OpenClipboard 0
-    EmptyClipboard
-    
-    hGlobal = GlobalAlloc(GMEM_MOVEABLE, Len(sText) + 1)
-    lpGlobal = GlobalLock(hGlobal)
-    
-    If lpGlobal <> 0 Then
-        lstrcpy ByVal lpGlobal, ByVal sText
-        GlobalUnlock hGlobal
-        SetClipboardData CF_TEXT, hGlobal
-    End If
-    
-    CloseClipboard
-End Sub
-
-'-----------------------------
-' NEW: Show this form and minimize Excel
-' Call this instead of .Show directly
-'-----------------------------
-Public Sub ShowFormAndMinimizeExcel()
-    Dim hWndXL As LongPtr
-
-    ' Show modeless so it stays visible/useable after minimizing Excel
-    Me.Show vbModeless
-
-    ' Minimize Excel main window
-    hWndXL = FindWindow("XLMAIN", Application.Caption)
-    If hWndXL <> 0 Then
-        ShowWindow hWndXL, SW_MINIMIZE
-    End If
-End Sub
-
-
-
-
-
-
-
-
-Sub GetWebPageHTML()
-    Dim Http As Object
-    Dim HTMLDoc As Object
-    Dim URL As String
-    Dim HTMLContent As String
-    
-    ' URL of the webpage
-    URL = "https://www.example.com"
-    
-    ' Create the XMLHTTP object
-    Set Http = CreateObject("MSXML2.XMLHTTP")
-    
-    ' Open a GET request
-    Http.Open "GET", URL, False
-    Http.Send
-    
-    ' Get the response text (HTML source)
-    HTMLContent = Http.ResponseText
-    
-    ' Print to Immediate Window (Ctrl+G to view in VBA editor)
-    Debug.Print HTMLContent
-    
-    ' Optionally load into an HTML document for parsing
-    Set HTMLDoc = CreateObject("HTMLFILE")
-    HTMLDoc.body.innerHTML = HTMLContent
-    
-    ' Example: print the page title
-    Debug.Print HTMLDoc.getElementsByTagName("title")(0).innerText
-End Sub
-
-
-Sub GetHTMLPage_WinHTTP()
-    Dim Http As Object
-    Dim URL As String
-    Dim HTML As String
-    
-    URL = "https://www.example.com"
-    
-    Set Http = CreateObject("WinHTTP.WinHTTPRequest.5.1")
-    Http.Open "GET", URL, False
-    Http.Send
-    
-    HTML = Http.ResponseText
-    Debug.Print HTML
-End Sub
-
-
-Sub test()
+Sub Edge_DumpHTML_OnFirstFrameStopped()
     Dim b As AutomateBrowser
+    Dim msg As Dictionary
+    Dim html As String
+    Dim start As Date
+    Dim timeoutSeconds As Long
+    
     Set b = New_AutomateBrowser
-    b.launch whichBrowser:=Chrome, _
-             useWebSocket:=True, _
-             useExistingBrowser:=True, _
-             additionnalInlineCommands:="--user-data-dir=""C:\Temp\ChromeProfile2"""
-    b.navigate "https://www.google.com"
+    
+    b.launch whichBrowser:=browserType.Edge, _
+             url:="https://en.wikipedia.org/wiki/Kitten", _
+             killWithoutAsking:=True
+    
+    b.cdp.Page.enable
+    
+    timeoutSeconds = 20
+    start = Now
+    
+    Do
+        ' fill event queue
+        b.cdp.peakMessage
+        
+        ' read one from queue
+        Set msg = b.cdp.popMessageFromQueue
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "Page.frameStoppedLoading" Then
+                    Debug.Print "DETECTED: Page.frameStoppedLoading"
+                    Exit Do
+                End If
+            End If
+        End If
+        
+        If DateDiff("s", start, Now) > timeoutSeconds Then
+            Debug.Print "TIMEOUT: no frameStoppedLoading detected"
+            Exit Do
+        End If
+        DoEvents
+    Loop
+    
+    html = CStr(b.jsEval("document.documentElement.outerHTML"))
+    Debug.Print "HTML length = " & Len(html)
+    Debug.Print (html)
+    b.Quit
 End Sub
+
+
