@@ -25,3 +25,15 @@ End Function
              url:="https://www.google.com/", _
              additionnalInlineCommands:="--headless=new --disable-gpu", _
              killWithoutAsking:=True
+
+
+             Dim ws As Worksheet
+Dim lastRow As Long
+
+Set ws = ThisWorkbook.Sheets("SCORECARD")  ' change sheet if needed
+lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+Dim cell As Range
+For Each cell In ws.Range("A7:A" & lastRow)
+    ' Do something with each cell
+    cell.Value = UCase(cell.Value)  ' example: make text uppercase
+Next cell
