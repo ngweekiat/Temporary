@@ -1,14 +1,19 @@
-Sub Edge_FullHTML()
+Sub Edge_FullHTML_Headless()
     Dim b As AutomateBrowser
     Dim html As String
 
     Set b = New_AutomateBrowser
-    b.launch whichBrowser:=browserType.Edge, url:="https://www.google.com/", killWithoutAsking:=True
 
-    ' Wait for page scripts to run (adjust if needed)
+    ' Launch Edge headless
+    b.launch whichBrowser:=browserType.Edge, _
+             url:="https://www.google.com/", _
+             additionnalInlineCommands:="--headless=new --disable-gpu", _
+             killWithoutAsking:=True
+
+    ' Wait a bit for page to render
     Application.Wait (Now + TimeValue("0:00:05"))
 
-    ' Grab full DOM
+    ' Grab full HTML
     html = CStr(b.jsEval("document.documentElement.outerHTML"))
     Debug.Print html
 
