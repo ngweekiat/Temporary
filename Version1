@@ -1,50 +1,56 @@
 Option Explicit
 
-Sub Edge_DumpHTML_WaitUntilIdle()
+Sub Edge_DumpHTML_WhenIdle()
     Dim b As AutomateBrowser
     Dim msg As Dictionary
     Dim html As String
     Dim lastEventTime As Date
-    Dim idleThresholdSeconds As Long
-    Dim overallTimeout As Long
+    Dim idleThresholdSeconds As Double
+    Dim maxWaitSeconds As Long
     Dim start As Date
     
     Set b = New_AutomateBrowser
     
-    ' Launch Edge (background headless optional)
+    ' Launch Edge (headless optional)
     b.launch whichBrowser:=browserType.Edge, _
              url:="https://en.wikipedia.org/wiki/Kitten", _
              killWithoutAsking:=True
     
-    ' Enable domains so events fire
+    ' Enable domains that generate load events
     b.cdp.Page.enable
     b.cdp.DOM.enable
-    b.cdp.Network.enable
     b.cdp.Runtime.enable
+    b.cdp.Network.enable
     
-    idleThresholdSeconds = 2   ' consider idle after 2s of no events
-    overallTimeout = 20        ' hard stop after 20s
+    ' idle detection parameters
+    idleThresholdSeconds = 2     ' consider "done" if 2s pass without events
+    maxWaitSeconds = 20          ' safety timeout
     start = Now
     lastEventTime = Now
     
     Do
-        Set msg = b.cdp.peakMessage
+        ' pull in new events
+        b.cdp.peakMessage
+        
+        ' process queue (if any)
+        Set msg = b.cdp.popMessageFromQueue
         If Not msg Is Nothing Then
+            lastEventTime = Now   ' reset idle timer when something arrives
+            
             If msg.Exists("method") Then
                 Debug.Print "Event: " & msg("method")
-                lastEventTime = Now
             End If
         End If
         
-        ' if no events for idleThresholdSeconds → stop
+        ' stop if idle long enough
         If DateDiff("s", lastEventTime, Now) >= idleThresholdSeconds Then
-            Debug.Print "No events for " & idleThresholdSeconds & "s → stopping"
+            Debug.Print "No events for " & idleThresholdSeconds & "s — assuming page is idle"
             Exit Do
         End If
         
-        ' safety timeout
-        If DateDiff("s", start, Now) >= overallTimeout Then
-            Debug.Print "Overall timeout → stopping"
+        ' stop if hard timeout
+        If DateDiff("s", start, Now) >= maxWaitSeconds Then
+            Debug.Print "Timeout: gave up after " & maxWaitSeconds & "s"
             Exit Do
         End If
         
