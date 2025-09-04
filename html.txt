@@ -1,14 +1,13 @@
 Option Explicit
 
-' Reference required: Microsoft HTML Object Library
+' Extract inner text for a given CSS selector
 Function ExtractElementText(ByVal html As String, ByVal cssSelector As String) As String
-    Dim htmlDoc As New HTMLDocument
+    Dim htmlDoc As Object   ' use late binding (no need to add reference)
     Dim elem As Object
     
-    ' Load the HTML into MSHTML
+    Set htmlDoc = CreateObject("HTMLFILE")
     htmlDoc.body.innerHTML = html
     
-    ' Query for the element
     Set elem = htmlDoc.querySelector(cssSelector)
     
     If Not elem Is Nothing Then
