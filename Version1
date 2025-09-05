@@ -60,6 +60,13 @@ End Sub
 
 
 '====================================================================
+Option Explicit
+
+Private gBrowser As AutomateBrowser   ' keep Edge alive across calls
+
+
+
+
 Function FetchXMLBySerial(ByVal serialNumber As String) As String
     Dim msg As Dictionary
     Dim start As Date
