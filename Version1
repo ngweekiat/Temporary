@@ -89,14 +89,11 @@ Function FetchXMLBySerial(ByVal serialNumber As String) As String
     ' Build URL with serial number
     url = "https://yourserver/path/to/" & serialNumber & ".xml"
     
-    ' Create new blank tab and attach
-    targetId = gBrowser.cdp.Target.createTarget("about:blank")
+    ' Open a new tab
+    targetId = gBrowser.cdp.Target.createTarget(url)
     gBrowser.cdp.Target.attachToTarget targetId, True
     
-    ' Navigate that tab to the XML URL
-    gBrowser.cdp.Page.navigate url
-    
-    ' Wait for load
+    ' Wait for page load
     timeoutSeconds = 15
     start = Now
     Do While DateDiff("s", start, Now) < timeoutSeconds
@@ -114,10 +111,9 @@ Function FetchXMLBySerial(ByVal serialNumber As String) As String
     xmlText = CStr(gBrowser.jsEval("document.documentElement.outerHTML"))
     FetchXMLBySerial = xmlText
     
-    ' Close the tab after extraction
+    ' Close the tab
     gBrowser.cdp.Target.closeTarget targetId
 End Function
-
 
 
 Sub TestFetchXMLList()
