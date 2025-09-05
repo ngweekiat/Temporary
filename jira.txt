@@ -59,3 +59,34 @@ Sub Edge_LogAllCDPEvents_AndDumpHTML()
     
     b.Quit
 End Sub
+
+
+
+'-------------------------------------
+Option Explicit
+
+Sub GetXMLviaSSO()
+    Dim b As AutomateBrowser
+    Dim xmlContent As String
+    
+    Set b = New_AutomateBrowser
+    
+    ' Launch Edge and navigate directly to the XML file
+    b.launch whichBrowser:=browserType.Edge, _
+             url:="https://yourcompany.com/path/file.xml", _
+             killWithoutAsking:=True
+    
+    ' Enable Page domain
+    b.cdp.Page.enable
+    
+    ' Wait for page to load
+    b.cdp.waitForEvent "Page.loadEventFired", 15000
+    
+    ' Get the raw XML text (outerHTML will return the XML itself here)
+    xmlContent = CStr(b.jsEval("document.documentElement.outerHTML"))
+    
+    Debug.Print xmlContent
+    Debug.Print "Length = " & Len(xmlContent)
+    
+    b.Quit
+End Sub
