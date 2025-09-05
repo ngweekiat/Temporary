@@ -62,48 +62,45 @@ End Sub
 '====================================================================
 Option Explicit
 
-' Global browser instance (kept alive across calls)
+' Keep one browser instance alive across calls
 Private gBrowser As AutomateBrowser
 
-Function FetchXML(ByVal file_serialNumber As String) As String
+Function FetchXMLFile(ByVal file_serialNumber As String) As String
     Dim msg As Dictionary
-    Dim resp As Dictionary
-    Dim reqId As String
     Dim xmlText As String
-    Dim url As String
-    Dim timeoutSeconds As Long
     Dim start As Date
+    Dim timeoutSeconds As Long
+    Dim url As String
     Dim targetId As String
     
-    ' Launch browser once if not already running
+    ' Initialise browser once
     If gBrowser Is Nothing Then
         Set gBrowser = New_AutomateBrowser
         gBrowser.launch whichBrowser:=browserType.Edge, _
                         url:="about:blank", _
                         killWithoutAsking:=True
-        gBrowser.cdp.Network.enable
         gBrowser.cdp.Page.enable
+        gBrowser.cdp.Runtime.enable
+        gBrowser.cdp.Network.enable
         gBrowser.cdp.Target.setDiscoverTargets True
     End If
     
-    ' Build XML URL
-    url = "https://yourserver/path/to/file_" & file_serialNumber & ".xml"
+    ' Build URL for this serial number
+    url = "https://yourserver/path/to/" & file_serialNumber & ".xml"
     
-    ' Open in new tab
+    ' Open new tab for this file
     targetId = gBrowser.cdp.Target.createTarget(url)
     gBrowser.cdp.Target.attachToTarget targetId, True
     
-    ' Wait for first Network.responseReceived
+    ' Wait until the page load event
     timeoutSeconds = 15
     start = Now
-    reqId = vbNullString
     Do While DateDiff("s", start, Now) < timeoutSeconds
         gBrowser.cdp.peakMessage
         Set msg = gBrowser.cdp.popMessageFromQueue
         If Not msg Is Nothing Then
             If msg.Exists("method") Then
-                If msg("method") = "Network.responseReceived" Then
-                    reqId = msg("params")("requestId")
+                If msg("method") = "Page.loadEventFired" Then
                     Exit Do
                 End If
             End If
@@ -111,49 +108,24 @@ Function FetchXML(ByVal file_serialNumber As String) As String
         DoEvents
     Loop
     
-    ' Fetch raw body
-    If reqId <> vbNullString Then
-        Set resp = gBrowser.cdp.InvokeMethod("Network.getResponseBody", _
-                     MakeDict("requestId", reqId))
-        If Not resp Is Nothing Then
-            xmlText = resp("body")
-            ' Trim to start at <rss
-            Dim pos As Long
-            pos = InStr(1, xmlText, "<rss", vbTextCompare)
-            If pos > 0 Then xmlText = Mid$(xmlText, pos)
-            FetchXML = xmlText
-        End If
-    End If
+    ' Extract raw XML (DOM serialization still works here)
+    xmlText = CStr(gBrowser.jsEval("document.documentElement.outerHTML"))
+    FetchXMLFile = xmlText
     
-    ' Close this tab
+    ' Close the tab we just opened
     gBrowser.cdp.Target.closeTarget targetId
 End Function
 
-' Cleanup routine: close browser when done
-Sub CloseBrowser()
-    If Not gBrowser Is Nothing Then
-        gBrowser.Quit
-        Set gBrowser = Nothing
-    End If
-End Sub
-
-' Helper to build a dictionary easily
-Private Function MakeDict(key As String, val As String) As Dictionary
-    Dim d As New Dictionary
-    d.Add key, val
-    Set MakeDict = d
-End Function
-
-' Example usage
 Sub TestFetchXML()
     Dim xml As String
     
-    xml = FetchXML("12345")
-    Debug.Print Left(xml, 500)   ' preview
+    xml = FetchXMLFile("12345")
+    Debug.Print "XML length (12345) = " & Len(xml)
     
-    xml = FetchXML("67890")
-    Debug.Print Left(xml, 500)   ' preview
+    xml = FetchXMLFile("67890")
+    Debug.Print "XML length (67890) = " & Len(xml)
     
-    ' When all done
-    CloseBrowser
+    ' Clean up browser once done
+    gBrowser.Quit
+    Set gBrowser = Nothing
 End Sub
