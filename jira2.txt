@@ -1,0 +1,45 @@
+Function GetRawXML(url As String) As String
+    Dim b As AutomateBrowser
+    Dim msg As Dictionary
+    Dim start As Date
+    Dim timeoutSeconds As Long
+    
+    Set b = New_AutomateBrowser
+    b.launch whichBrowser:=browserType.Edge, url:=url, killWithoutAsking:=True
+    
+    b.cdp.Network.enable
+    
+    timeoutSeconds = 10
+    start = Now
+    
+    Do While DateDiff("s", start, Now) < timeoutSeconds
+        b.cdp.peakMessage
+        Set msg = b.cdp.popMessageFromQueue
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "Network.responseReceived" Then
+                    Dim mime As String
+                    mime = msg("params")("response")("mimeType")
+                    If InStr(1, mime, "xml", vbTextCompare) > 0 Then
+                        Dim reqId As String
+                        reqId = msg("params")("requestId")
+                        Dim body As Dictionary
+                        Set body = b.cdp.Network.getResponseBody(reqId)
+                        GetRawXML = body("body")
+                        Exit Do
+                    End If
+                End If
+            End If
+        End If
+        DoEvents
+    Loop
+    
+    b.Quit
+End Function
+
+
+Sub TestXML()
+    Dim xml As String
+    xml = GetRawXML("https://yourserver/path/to/file.xml")
+    Debug.Print xml
+End Sub
