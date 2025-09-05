@@ -65,28 +65,76 @@ End Sub
 '-------------------------------------
 Option Explicit
 
-Sub GetXMLviaSSO()
+Sub Edge_FetchXMLFile()
     Dim b As AutomateBrowser
+    Dim msg As Dictionary
+    Dim start As Date
+    Dim timeoutSeconds As Long
+    Dim requestId As String
     Dim xmlContent As String
+    Dim pageLoaded As Boolean
     
     Set b = New_AutomateBrowser
     
-    ' Launch Edge and navigate directly to the XML file
+    ' Launch Edge (go straight to the XML file)
     b.launch whichBrowser:=browserType.Edge, _
-             url:="https://yourcompany.com/path/file.xml", _
+             url:="https://yourserver.example.com/path/to/file.xml", _
              killWithoutAsking:=True
     
-    ' Enable Page domain
+    ' Enable domains we need
     b.cdp.Page.enable
+    b.cdp.Network.enable
     
-    ' Wait for page to load
-    b.cdp.waitForEvent "Page.loadEventFired", 15000
+    timeoutSeconds = 20
+    start = Now
+    pageLoaded = False
     
-    ' Get the raw XML text (outerHTML will return the XML itself here)
-    xmlContent = CStr(b.jsEval("document.documentElement.outerHTML"))
+    ' Wait loop: look for Network.loadingFinished for the XML
+    Do While (Not pageLoaded) And (DateDiff("s", start, Now) < timeoutSeconds)
+        b.cdp.peakMessage
+        
+        Do
+            Set msg = b.cdp.popMessageFromQueue
+            If msg Is Nothing Then Exit Do
+            
+            If msg.Exists("method") Then
+                Select Case msg("method")
+                    Case "Network.requestWillBeSent"
+                        ' Track the request ID for the .xml file
+                        If InStr(1, LCase(msg("params")("request")("url")), ".xml") > 0 Then
+                            requestId = msg("params")("requestId")
+                        End If
+                    
+                    Case "Network.loadingFinished"
+                        ' Only stop if it matches our requestId
+                        If requestId <> "" Then
+                            If msg("params")("requestId") = requestId Then
+                                pageLoaded = True
+                                Debug.Print ">>> XML file finished loading"
+                            End If
+                        End If
+                End Select
+            End If
+        Loop
+        
+        DoEvents
+    Loop
     
-    Debug.Print xmlContent
-    Debug.Print "Length = " & Len(xmlContent)
+    If requestId = "" Then
+        Debug.Print "Did not see any .xml request"
+    ElseIf pageLoaded Then
+        ' Fetch response body of the XML request
+        Dim result As Dictionary
+        Set result = b.cdp.Network.getResponseBody(requestId)
+        If Not result Is Nothing Then
+            xmlContent = result("body")
+            Debug.Print "=== XML File Content ==="
+            Debug.Print Left(xmlContent, 1000)  ' print first 1000 chars
+            Debug.Print "XML length = " & Len(xmlContent)
+        Else
+            Debug.Print "Failed to get XML body"
+        End If
+    End If
     
     b.Quit
 End Sub
