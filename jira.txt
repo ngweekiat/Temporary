@@ -1,28 +1,17 @@
-Option Explicit
-
-Sub GetWebsiteHTML()
+Sub GetHTML_XHR_SSO()
     Dim http As Object
-    Dim html As Object
-    Dim websiteURL As String
-    Dim result As String
+    Dim URL As String
     
-    websiteURL = "https://www.example.com" ' Change this to your target URL
+    URL = "https://yourcompanysite/page"
     
-    ' Create XMLHTTP object
     Set http = CreateObject("MSXML2.XMLHTTP")
-    http.Open "GET", websiteURL, False
+    http.Open "GET", URL, False
+    http.setRequestHeader "Content-Type", "text/html"
+    http.setRequestHeader "Cache-Control", "no-cache"
+    
+    ' Let it use current logged-in credentials
+    http.setOption 2, 13056 ' ignore SSL errors if needed
+    
     http.Send
-    
-    ' Get the response text (HTML)
-    result = http.ResponseText
-    
-    ' Print raw HTML into Immediate Window (Ctrl+G in VBA editor)
-    Debug.Print result
-    
-    ' --- Optional: Parse HTML using HTMLDocument ---
-    Set html = CreateObject("HTMLFILE")
-    html.body.innerHTML = result
-    
-    ' Example: Extract the title tag
-    Debug.Print html.getElementsByTagName("title")(0).innerText
+    Debug.Print http.ResponseText
 End Sub
