@@ -65,3 +65,77 @@ Sub TestFetchWikiPage()
     html = FetchWikiPageHTML("Cat")
     Debug.Print "Cat HTML length = " & Len(html)
 End Sub
+
+
+
+1--------------------------------------------------------
+Option Explicit
+
+' Keep a single browser instance alive across calls
+Private gBrowser As AutomateBrowser
+
+Function FetchWikiPageHTML(ByVal searchTerm As String) As String
+    Dim msg As Dictionary
+    Dim start As Date
+    Dim timeoutSeconds As Long
+    Dim html As String
+    Dim url As String
+    Dim targetId As String
+    
+    ' Initialize browser once
+    If gBrowser Is Nothing Then
+        Set gBrowser = New_AutomateBrowser
+        gBrowser.launch whichBrowser:=browserType.Edge, _
+                        url:="about:blank", _
+                        killWithoutAsking:=True
+        gBrowser.cdp.Page.enable
+        gBrowser.cdp.DOM.enable
+        gBrowser.cdp.Runtime.enable
+        gBrowser.cdp.Network.enable
+        gBrowser.cdp.Target.setDiscoverTargets True
+    End If
+    
+    ' Build the URL with the search term
+    url = "https://en.wikipedia.org/wiki/" & searchTerm & ".XML"
+    
+    ' Open new tab
+    targetId = gBrowser.cdp.Target.createTarget(url)
+    gBrowser.cdp.Target.attachToTarget targetId, True
+    
+    ' Wait for page load event
+    timeoutSeconds = 10
+    start = Now
+    Do While DateDiff("s", start, Now) < timeoutSeconds
+        gBrowser.cdp.peakMessage
+        Set msg = gBrowser.cdp.popMessageFromQueue
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "Page.loadEventFired" Then
+                    Exit Do
+                End If
+            End If
+        End If
+        DoEvents
+    Loop
+    
+    ' Grab HTML snapshot
+    html = CStr(gBrowser.jsEval("document.documentElement.outerHTML"))
+    FetchWikiPageHTML = html
+    
+    ' Close the tab we just opened
+    gBrowser.cdp.Target.closeTarget targetId
+End Function
+
+Sub TestFetchWikiPage()
+    Dim html As String
+    
+    html = FetchWikiPageHTML("Kitten")
+    Debug.Print "Kitten HTML length = " & Len(html)
+    
+    html = FetchWikiPageHTML("Cat")
+    Debug.Print "Cat HTML length = " & Len(html)
+    
+    ' When done, close browser
+    gBrowser.Quit
+    Set gBrowser = Nothing
+End Sub
