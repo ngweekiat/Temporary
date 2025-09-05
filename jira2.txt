@@ -55,27 +55,46 @@ Sub TestFetchXML()
     Dim lastRow As Long
     Dim r As Long
     Dim serialNumber As String
-    Dim xml As String
+    Dim html As String
+    Dim fieldValue As String
     
-    Set ws = ThisWorkbook.Sheets(1) ' adjust if needed
-    
-    ' Find last row in column A
+    Set ws = ThisWorkbook.Sheets(1)
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     
-    ' Loop from row 2 downwards
     For r = 2 To lastRow
         serialNumber = Trim(ws.Cells(r, "A").Value)
         
         If Len(serialNumber) > 0 Then
-            xml = FetchXMLBySerial(serialNumber)
-            ' Write result into column B
-            ws.Cells(r, "B").Value = xml
-            Debug.Print "Row " & r & " Serial " & serialNumber & ": length=" & Len(xml)
+            html = FetchXMLBySerial(serialNumber)
+            fieldValue = ExtractCustomField(html, "customfield_11222")
+            
+            ws.Cells(r, "B").Value = fieldValue
+            Debug.Print "Row " & r & " Serial " & serialNumber & " => " & fieldValue
         End If
     Next r
     
     CloseBrowser
 End Sub
+
+
+Private Function ExtractCustomField(ByVal html As String, ByVal fieldId As String) As String
+    Dim startTag As String, endTag As String
+    Dim p1 As Long, p2 As Long
+    
+    startTag = "<customfield id=""" & fieldId & """>"
+    endTag = "</customfield>"
+    
+    p1 = InStr(1, html, startTag, vbTextCompare)
+    If p1 = 0 Then Exit Function ' not found
+    
+    p1 = p1 + Len(startTag)
+    p2 = InStr(p1, html, endTag, vbTextCompare)
+    If p2 = 0 Then Exit Function
+    
+    ExtractCustomField = Mid$(html, p1, p2 - p1)
+End Function
+
+
 
 
 Sub CloseBrowser()
