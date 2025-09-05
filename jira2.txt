@@ -55,21 +55,25 @@ Sub TestFetchXML()
     Dim lastRow As Long
     Dim r As Long
     Dim serialNumber As String
-    Dim html As String
+    Dim xml As String
     Dim fieldValue As String
     
     Set ws = ThisWorkbook.Sheets(1)
+    
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     
     For r = 2 To lastRow
         serialNumber = Trim(ws.Cells(r, "A").Value)
         
         If Len(serialNumber) > 0 Then
-            html = FetchXMLBySerial(serialNumber)
-            fieldValue = ExtractCustomField(html, "customfield_11222")
+            xml = FetchXMLBySerial(serialNumber)
             
-            ws.Cells(r, "B").Value = fieldValue
-            Debug.Print "Row " & r & " Serial " & serialNumber & " => " & fieldValue
+            ' Write raw XML into col B (optional)
+            ws.Cells(r, "B").Value = xml
+            
+            ' Extract only the customfield_11222 contents into col C
+            fieldValue = ExtractCustomFieldValue(xml, "customfield_11222")
+            ws.Cells(r, "C").Value = fieldValue
         End If
     Next r
     
@@ -77,21 +81,27 @@ Sub TestFetchXML()
 End Sub
 
 
-Private Function ExtractCustomField(ByVal html As String, ByVal fieldId As String) As String
-    Dim startTag As String, endTag As String
-    Dim p1 As Long, p2 As Long
+Function ExtractCustomFieldValue(xml As String, fieldId As String) As String
+    Dim xDoc As Object
+    Dim node As Object
     
-    startTag = "<customfield id=""" & fieldId & """>"
-    endTag = "</customfield>"
+    On Error Resume Next
+    Set xDoc = CreateObject("MSXML2.DOMDocument.6.0")
+    xDoc.async = False
+    xDoc.validateOnParse = False
     
-    p1 = InStr(1, html, startTag, vbTextCompare)
-    If p1 = 0 Then Exit Function ' not found
+    If Not xDoc.LoadXML(xml) Then
+        ExtractCustomFieldValue = ""   ' invalid XML
+        Exit Function
+    End If
     
-    p1 = p1 + Len(startTag)
-    p2 = InStr(p1, html, endTag, vbTextCompare)
-    If p2 = 0 Then Exit Function
-    
-    ExtractCustomField = Mid$(html, p1, p2 - p1)
+    ' Find the node by XPath
+    Set node = xDoc.SelectSingleNode("//customfield[@id='" & fieldId & "']")
+    If Not node Is Nothing Then
+        ExtractCustomFieldValue = node.Text
+    Else
+        ExtractCustomFieldValue = ""
+    End If
 End Function
 
 
