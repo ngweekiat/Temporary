@@ -65,37 +65,35 @@ End Sub
 '-------------------------------------
 Option Explicit
 
-Sub Edge_GetXMLRaw()
+Sub Edge_GetXMLContents()
     Dim b As AutomateBrowser
     Dim msg As Dictionary
-    Dim resp As Dictionary
-    Dim reqId As String
     Dim xmlText As String
-    Dim timeoutSeconds As Long
     Dim start As Date
+    Dim timeoutSeconds As Long
     
     Set b = New_AutomateBrowser
     
-    ' Launch Edge directly to XML file URL
+    ' Launch Edge directly to your XML file URL
     b.launch whichBrowser:=browserType.Edge, _
              url:="https://yourserver/path/to/file.xml", _
              killWithoutAsking:=True
     
-    ' Enable Network domain so we can see responses
+    ' Enable Page + Network (DOM not needed for plain XML)
+    b.cdp.Page.enable
+    b.cdp.Runtime.enable
     b.cdp.Network.enable
     
     timeoutSeconds = 15
     start = Now
-    reqId = vbNullString
     
-    ' Wait for first Network.responseReceived
+    ' Simple wait loop: look for load event or network idle
     Do While DateDiff("s", start, Now) < timeoutSeconds
         b.cdp.peakMessage
         Set msg = b.cdp.popMessageFromQueue
         If Not msg Is Nothing Then
             If msg.Exists("method") Then
-                If msg("method") = "Network.responseReceived" Then
-                    reqId = msg("params")("requestId")
+                If msg("method") = "Page.loadEventFired" Then
                     Exit Do
                 End If
             End If
@@ -103,32 +101,12 @@ Sub Edge_GetXMLRaw()
         DoEvents
     Loop
     
-    If reqId <> vbNullString Then
-        ' Ask CDP for the raw response body
-        Set resp = b.cdp.InvokeMethod("Network.getResponseBody", _
-                     MakeDict("requestId", reqId))
-        If Not resp Is Nothing Then
-            xmlText = resp("body")
-            
-            ' Trim to start at <rss
-            Dim pos As Long
-            pos = InStr(1, xmlText, "<rss", vbTextCompare)
-            If pos > 0 Then xmlText = Mid$(xmlText, pos)
-            
-            Debug.Print "=== XML Contents ==="
-            Debug.Print Left(xmlText, 1000)  ' preview first 1000 chars
-            Debug.Print "XML length = " & Len(xmlText)
-        End If
-    Else
-        Debug.Print "No response captured."
-    End If
+    ' At this point the XML is loaded in the browser
+    xmlText = CStr(b.jsEval("document.documentElement.outerHTML"))
+    
+    Debug.Print "=== XML Contents ==="
+    Debug.Print xmlText
+    Debug.Print "XML length = " & Len(xmlText)
     
     b.Quit
 End Sub
-
-' Helper to build a dictionary easily
-Private Function MakeDict(key As String, val As String) As Dictionary
-    Dim d As New Dictionary
-    d.Add key, val
-    Set MakeDict = d
-End Function
