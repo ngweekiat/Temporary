@@ -4,14 +4,15 @@ Sub GetHTML_XHR_SSO()
     
     URL = "https://yourcompanysite/page"
     
-    Set http = CreateObject("MSXML2.XMLHTTP")
+    ' Use ServerXMLHTTP instead of XMLHTTP
+    Set http = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    
+    ' This tells it to use your current Windows credentials (for NTLM/Kerberos SSO)
+    http.setOption 3, "AUTOLOGIN_ONLY_SERVER"
+    
+    ' Open and send request
     http.Open "GET", URL, False
-    http.setRequestHeader "Content-Type", "text/html"
-    http.setRequestHeader "Cache-Control", "no-cache"
-    
-    ' Let it use current logged-in credentials
-    http.setOption 2, 13056 ' ignore SSL errors if needed
-    
     http.Send
+    
     Debug.Print http.ResponseText
 End Sub
