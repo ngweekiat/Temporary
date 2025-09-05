@@ -1,0 +1,28 @@
+Option Explicit
+
+Sub GetWebsiteHTML()
+    Dim http As Object
+    Dim html As Object
+    Dim websiteURL As String
+    Dim result As String
+    
+    websiteURL = "https://www.example.com" ' Change this to your target URL
+    
+    ' Create XMLHTTP object
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    http.Open "GET", websiteURL, False
+    http.Send
+    
+    ' Get the response text (HTML)
+    result = http.ResponseText
+    
+    ' Print raw HTML into Immediate Window (Ctrl+G in VBA editor)
+    Debug.Print result
+    
+    ' --- Optional: Parse HTML using HTMLDocument ---
+    Set html = CreateObject("HTMLFILE")
+    html.body.innerHTML = result
+    
+    ' Example: Extract the title tag
+    Debug.Print html.getElementsByTagName("title")(0).innerText
+End Sub
