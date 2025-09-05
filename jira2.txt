@@ -4,8 +4,6 @@ Private gBrowser As AutomateBrowser   ' keep Edge alive across calls
 
 Function FetchXMLBySerial(ByVal serialNumber As String) As String
     Dim url As String
-    Dim targetId As String
-    Dim sessionId As String
     Dim evalRes As Dictionary
     Dim start As Date, timeoutSeconds As Long
     Dim msg As Dictionary
@@ -24,11 +22,8 @@ Function FetchXMLBySerial(ByVal serialNumber As String) As String
     ' Build URL for this serial
     url = "https://yourserver/path/to/" & serialNumber & ".xml"
     
-    ' Create a new tab
-    targetId = gBrowser.cdp.Target.createTarget(url)
-    
-    ' Attach to that tab and get sessionId
-    sessionId = gBrowser.cdp.Target.attachToTarget(targetId, True)
+    ' Navigate current tab to the new URL
+    gBrowser.cdp.Page.navigate url
     
     ' Wait until load event
     timeoutSeconds = 10
@@ -44,18 +39,14 @@ Function FetchXMLBySerial(ByVal serialNumber As String) As String
         DoEvents
     Loop
     
-    ' Evaluate outerHTML in the correct session
-    Set evalRes = gBrowser.cdp.Runtime.evaluate( _
-                      "document.documentElement.outerHTML", sessionId)
+    ' Evaluate outerHTML of the loaded page
+    Set evalRes = gBrowser.cdp.Runtime.evaluate("document.documentElement.outerHTML")
     
     If Not evalRes Is Nothing Then
         FetchXMLBySerial = evalRes("result")("value")
     Else
         FetchXMLBySerial = vbNullString
     End If
-    
-    ' Close the tab afterwards
-    gBrowser.cdp.Target.closeTarget targetId
 End Function
 
 
@@ -67,7 +58,7 @@ Sub TestFetchXML()
     For Each sn In serials
         xml = FetchXMLBySerial(sn)
         Debug.Print "Serial " & sn & ": length=" & Len(xml)
-        Debug.Print Left(xml, 200) & "..."   ' preview
+        Debug.Print Left(xml, 200) & "..."   ' preview first 200 chars
     Next
     
     CloseBrowser
@@ -79,4 +70,3 @@ Sub CloseBrowser()
         Set gBrowser = Nothing
     End If
 End Sub
-
