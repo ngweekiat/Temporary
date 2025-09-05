@@ -1,32 +1,57 @@
 Option Explicit
 
-Sub ExtractAndPrintElement()
-    Dim b As AutomateBrowser
+Private gBrowser As AutomateBrowser
+
+Sub FetchMultipleSitesHTML()
+    Dim sites As Variant
+    Dim site As Variant
+    Dim targetId As String
+    Dim sessionId As String
+    Dim evalRes As Dictionary
     Dim html As String
-    Dim result As String
     
-    ' Launch Edge and navigate
-    Set b = New_AutomateBrowser
-    b.launch whichBrowser:=browserType.Edge, _
-             url:="https://en.wikipedia.org/wiki/Kitten", _
-             killWithoutAsking:=True
+    sites = Array("https://example.com", _
+                  "https://en.wikipedia.org/wiki/Kitten", _
+                  "https://httpbin.org/html")
     
-    ' Wait a bit for the page to load (simplest way)
-    Application.Wait (Now + TimeValue("0:00:05"))
+    ' Launch Edge once
+    Set gBrowser = New_AutomateBrowser
+    gBrowser.launch whichBrowser:=browserType.Edge, _
+                    url:="about:blank", _
+                    killWithoutAsking:=True
     
-    ' Grab the page HTML
-    html = CStr(b.jsEval("document.documentElement.outerHTML"))
+    ' Enable runtime so we can evaluate
+    gBrowser.cdp.Runtime.enable
     
-    ' Quit the browser
-    b.Quit
+    ' Loop through each site
+    For Each site In sites
+        Debug.Print "=== Opening: " & site & " ==="
+        
+        ' Open a new tab
+        targetId = gBrowser.cdp.Target.createTarget(site)
+        sessionId = gBrowser.cdp.Target.attachToTarget(targetId, True)
+        
+        ' Wait a moment for load (quick + dirty)
+        Application.Wait (Now + TimeValue("0:00:03"))
+        
+        ' Confirm which tab we’re in
+        Set evalRes = gBrowser.cdp.Runtime.evaluate("window.location.href", sessionId)
+        Debug.Print "Attached URL: " & evalRes("result")("value")
+        
+        ' Grab HTML in this tab
+        Set evalRes = gBrowser.cdp.Runtime.evaluate("document.documentElement.outerHTML", sessionId)
+        html = evalRes("result")("value")
+        
+        ' Print output (first 300 chars for readability)
+        Debug.Print Left(html, 300) & vbCrLf & "..."
+        
+        ' Close the tab
+        gBrowser.cdp.Target.closeTarget targetId
+    Next site
     
-    ' Extract element by CSS selector
-    result = ExtractElementText(html, "#toolbar span.small.quiet")
+    ' Quit browser at the end
+    gBrowser.Quit
+    Set gBrowser = Nothing
     
-    ' Print result
-    If result <> vbNullString Then
-        Debug.Print "Extracted text: " & result
-    Else
-        Debug.Print "No element found for selector."
-    End If
+    Debug.Print "=== Done fetching all sites ==="
 End Sub
