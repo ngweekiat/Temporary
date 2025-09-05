@@ -62,18 +62,18 @@ End Sub
 '====================================================================
 Option Explicit
 
-' Keep one browser instance alive across calls
+' Keep a single browser instance alive
 Private gBrowser As AutomateBrowser
 
-Function FetchXMLFile(ByVal file_serialNumber As String) As String
+Function FetchXMLBySerial(ByVal serialNumber As String) As String
     Dim msg As Dictionary
-    Dim xmlText As String
     Dim start As Date
     Dim timeoutSeconds As Long
+    Dim xmlText As String
     Dim url As String
     Dim targetId As String
     
-    ' Initialise browser once
+    ' Initialize browser once
     If gBrowser Is Nothing Then
         Set gBrowser = New_AutomateBrowser
         gBrowser.launch whichBrowser:=browserType.Edge, _
@@ -85,14 +85,14 @@ Function FetchXMLFile(ByVal file_serialNumber As String) As String
         gBrowser.cdp.Target.setDiscoverTargets True
     End If
     
-    ' Build URL for this serial number
-    url = "https://yourserver/path/to/" & file_serialNumber & ".xml"
+    ' Build the URL for this serial
+    url = "https://yourserver/path/to/" & serialNumber & ".xml"
     
-    ' Open new tab for this file
+    ' Open new tab for this request
     targetId = gBrowser.cdp.Target.createTarget(url)
     gBrowser.cdp.Target.attachToTarget targetId, True
     
-    ' Wait until the page load event
+    ' Wait for load event
     timeoutSeconds = 15
     start = Now
     Do While DateDiff("s", start, Now) < timeoutSeconds
@@ -108,24 +108,31 @@ Function FetchXMLFile(ByVal file_serialNumber As String) As String
         DoEvents
     Loop
     
-    ' Extract raw XML (DOM serialization still works here)
+    ' Grab XML (still uses DOM, but you can switch to Network.getResponseBody if needed)
     xmlText = CStr(gBrowser.jsEval("document.documentElement.outerHTML"))
-    FetchXMLFile = xmlText
+    
+    ' Return it
+    FetchXMLBySerial = xmlText
     
     ' Close the tab we just opened
     gBrowser.cdp.Target.closeTarget targetId
 End Function
 
-Sub TestFetchXML()
-    Dim xml As String
+
+Sub TestFetchSerials()
+    Dim serials As Variant
+    Dim s As Variant
+    Dim xmlResult As String
     
-    xml = FetchXMLFile("12345")
-    Debug.Print "XML length (12345) = " & Len(xml)
+    ' Example list of serial numbers
+    serials = Array("12345", "67890", "ABCDE")
     
-    xml = FetchXMLFile("67890")
-    Debug.Print "XML length (67890) = " & Len(xml)
+    For Each s In serials
+        xmlResult = FetchXMLBySerial(CStr(s))
+        Debug.Print "Serial " & s & " length=" & Len(xmlResult)
+    Next s
     
-    ' Clean up browser once done
+    ' When done, close the browser completely
     gBrowser.Quit
     Set gBrowser = Nothing
 End Sub
