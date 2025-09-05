@@ -60,20 +60,15 @@ End Sub
 
 
 '====================================================================
-Option Explicit
-
-' Keep a single browser instance alive
-Private gBrowser As AutomateBrowser
-
 Function FetchXMLBySerial(ByVal serialNumber As String) As String
     Dim msg As Dictionary
     Dim start As Date
     Dim timeoutSeconds As Long
-    Dim xmlText As String
     Dim url As String
     Dim targetId As String
+    Dim xmlText As String
     
-    ' Initialize browser once
+    ' Launch Edge only once
     If gBrowser Is Nothing Then
         Set gBrowser = New_AutomateBrowser
         gBrowser.launch whichBrowser:=browserType.Edge, _
@@ -82,17 +77,16 @@ Function FetchXMLBySerial(ByVal serialNumber As String) As String
         gBrowser.cdp.Page.enable
         gBrowser.cdp.Runtime.enable
         gBrowser.cdp.Network.enable
-        gBrowser.cdp.Target.setDiscoverTargets True
     End If
     
-    ' Build the URL for this serial
+    ' Build URL with serial number
     url = "https://yourserver/path/to/" & serialNumber & ".xml"
     
-    ' Open new tab for this request
+    ' Open a new tab
     targetId = gBrowser.cdp.Target.createTarget(url)
     gBrowser.cdp.Target.attachToTarget targetId, True
     
-    ' Wait for load event
+    ' Wait for page load
     timeoutSeconds = 15
     start = Now
     Do While DateDiff("s", start, Now) < timeoutSeconds
@@ -100,39 +94,43 @@ Function FetchXMLBySerial(ByVal serialNumber As String) As String
         Set msg = gBrowser.cdp.popMessageFromQueue
         If Not msg Is Nothing Then
             If msg.Exists("method") Then
-                If msg("method") = "Page.loadEventFired" Then
-                    Exit Do
-                End If
+                If msg("method") = "Page.loadEventFired" Then Exit Do
             End If
         End If
         DoEvents
     Loop
     
-    ' Grab XML (still uses DOM, but you can switch to Network.getResponseBody if needed)
+    ' Extract XML text
     xmlText = CStr(gBrowser.jsEval("document.documentElement.outerHTML"))
-    
-    ' Return it
     FetchXMLBySerial = xmlText
     
-    ' Close the tab we just opened
+    ' Close the tab
     gBrowser.cdp.Target.closeTarget targetId
 End Function
 
 
-Sub TestFetchSerials()
+Sub TestFetchXMLList()
     Dim serials As Variant
-    Dim s As Variant
-    Dim xmlResult As String
+    Dim sn As Variant
+    Dim result As String
     
-    ' Example list of serial numbers
-    serials = Array("12345", "67890", "ABCDE")
+    serials = Array("12345", "67890", "ABCDE")   ' list of serial numbers
     
-    For Each s In serials
-        xmlResult = FetchXMLBySerial(CStr(s))
-        Debug.Print "Serial " & s & " length=" & Len(xmlResult)
-    Next s
+    For Each sn In serials
+        result = FetchXMLBySerial(sn)
+        Debug.Print "Serial: " & sn
+        Debug.Print Left(result, 200) & "..."    ' preview first 200 chars
+    Next sn
     
-    ' When done, close the browser completely
-    gBrowser.Quit
-    Set gBrowser = Nothing
+    ' Close the browser once done
+    CloseBrowser
 End Sub
+
+
+Sub CloseBrowser()
+    If Not gBrowser Is Nothing Then
+        gBrowser.Quit
+        Set gBrowser = Nothing
+    End If
+End Sub
+
