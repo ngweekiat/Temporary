@@ -43,3 +43,88 @@ Sub TestXML()
     xml = GetRawXML("https://yourserver/path/to/file.xml")
     Debug.Print xml
 End Sub
+
+
+
+'=============================
+Option Explicit
+
+Private gBrowser As AutomateBrowser
+
+Function FetchXMLBySerial(ByVal serialNumber As String) As String
+    Dim msg As Dictionary
+    Dim start As Date, timeoutSeconds As Long
+    Dim url As String, targetId As String
+    
+    ' Start browser if not already running
+    If gBrowser Is Nothing Then
+        Set gBrowser = New_AutomateBrowser
+        gBrowser.launch whichBrowser:=browserType.Edge, _
+                        url:="about:blank", _
+                        killWithoutAsking:=True
+        gBrowser.cdp.Network.enable
+    End If
+    
+    ' Build URL
+    url = "https://yourserver/path/to/" & serialNumber & ".xml"
+    
+    ' Open new tab
+    targetId = gBrowser.cdp.Target.createTarget(url)
+    gBrowser.cdp.Target.attachToTarget targetId, True
+    
+    ' Wait for XML response
+    timeoutSeconds = 15
+    start = Now
+    Do While DateDiff("s", start, Now) < timeoutSeconds
+        gBrowser.cdp.peakMessage
+        Set msg = gBrowser.cdp.popMessageFromQueue
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "Network.responseReceived" Then
+                    Dim mime As String
+                    mime = msg("params")("response")("mimeType")
+                    If InStr(1, mime, "xml", vbTextCompare) > 0 Then
+                        Dim reqId As String
+                        reqId = msg("params")("requestId")
+                        Dim body As Dictionary
+                        Set body = gBrowser.cdp.Network.getResponseBody(reqId)
+                        FetchXMLBySerial = body("body")
+                        Exit Do
+                    End If
+                End If
+            End If
+        End If
+        DoEvents
+    Loop
+    
+    ' Close the tab after fetching
+    gBrowser.cdp.Target.closeTarget targetId
+End Function
+
+
+Sub FetchXMLBatch()
+    Dim serials As Variant
+    Dim sn As Variant
+    Dim xml As String
+    
+    ' Example list of serials
+    serials = Array("12345", "67890", "ABCDE")
+    
+    For Each sn In serials
+        xml = FetchXMLBySerial(CStr(sn))
+        Debug.Print "Serial " & sn & " → length=" & Len(xml)
+        Debug.Print Left(xml, 200) & "..."   ' preview first 200 chars
+    Next sn
+    
+    ' Close browser when done
+    CloseBrowser
+End Sub
+
+
+
+Sub CloseBrowser()
+    If Not gBrowser Is Nothing Then
+        gBrowser.Quit
+        Set gBrowser = Nothing
+    End If
+End Sub
