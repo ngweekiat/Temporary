@@ -2,13 +2,22 @@ Function SanitizeSensitiveText(inputText As String) As String
     Dim txt As String
     txt = inputText
     
-    ' Remove all non-letter characters (keep spaces)
-    txt = Replace(txt, vbTab, " ") ' replace tabs with space
+    ' Replace tabs with spaces
+    txt = Replace(txt, vbTab, " ")
+    
+    ' Remove all non-letter characters (letters and spaces only)
     Dim regEx As Object
     Set regEx = CreateObject("VBScript.RegExp")
-    regEx.Pattern = "[^A-Za-z\s]"
+    regEx.Pattern = "[^A-Za-z\s]" ' anything that is not a letter or space
     regEx.Global = True
     txt = regEx.Replace(txt, "")
+    
+    ' Collapse multiple spaces into single spaces
+    regEx.Pattern = "\s+"
+    txt = regEx.Replace(txt, " ")
+    
+    ' Trim leading/trailing spaces
+    txt = Trim(txt)
     
     ' Split text into words
     Dim words() As String
