@@ -15,8 +15,12 @@ Function SanitizeSensitiveText(inputText As String) As String
     Dim w As String
     For i = LBound(words) To UBound(words)
         w = words(i)
-        ' Check only words containing letters
-        If w <> "" And w Like "*[A-Za-z]*" Then
+        
+        ' Remove words that are purely numbers or contain non-letters
+        If w Like "*[!A-Za-z]*" Then
+            words(i) = "[Redacted]"
+        Else
+            ' Spell check only words with letters
             If Not wdApp.CheckSpelling(w) Then
                 words(i) = "[Redacted]"
             End If
