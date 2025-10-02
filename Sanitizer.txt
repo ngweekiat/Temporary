@@ -2,6 +2,14 @@ Function SanitizeSensitiveText(inputText As String) As String
     Dim txt As String
     txt = inputText
     
+    ' Remove all non-letter characters (keep spaces)
+    txt = Replace(txt, vbTab, " ") ' replace tabs with space
+    Dim regEx As Object
+    Set regEx = CreateObject("VBScript.RegExp")
+    regEx.Pattern = "[^A-Za-z\s]"
+    regEx.Global = True
+    txt = regEx.Replace(txt, "")
+    
     ' Split text into words
     Dim words() As String
     words = Split(txt, " ")
@@ -15,12 +23,9 @@ Function SanitizeSensitiveText(inputText As String) As String
     Dim w As String
     For i = LBound(words) To UBound(words)
         w = words(i)
-        
-        ' Remove words that are purely numbers or contain non-letters
-        If w Like "*[!A-Za-z]*" Then
-            words(i) = "[Redacted]"
-        Else
-            ' Spell check only words with letters
+        ' Only process non-empty words
+        If w <> "" Then
+            ' Redact words not in dictionary
             If Not wdApp.CheckSpelling(w) Then
                 words(i) = "[Redacted]"
             End If
