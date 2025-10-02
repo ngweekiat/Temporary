@@ -6,7 +6,7 @@ Function SanitizeInputText(inputText As String) As String
     words = Split(txt, " ")  ' Split text into words
     
     '-----------------------------------
-    ' Step 1: Spell check to replace unknown words with [Sanitized_ID]
+    ' Step 1: Spell check to replace unknown words with [Redacted]
     '-----------------------------------
     Dim wdApp As Object
     Set wdApp = CreateObject("Word.Application")
@@ -20,7 +20,7 @@ Function SanitizeInputText(inputText As String) As String
         ' Check spelling for alphabetic words only
         If w <> "" And w Like "*[A-Za-z]*" Then
             If Not wdApp.CheckSpelling(w) Then
-                words(i) = "[Sanitized_ID]"
+                words(i) = "[Redacted]"
             End If
         End If
     Next i
@@ -41,7 +41,7 @@ Function SanitizeInputText(inputText As String) As String
         .Pattern = "[^a-z\s'-]+"   ' Anything that is NOT a letter, space, apostrophe, or hyphen
         .Global = True
     End With
-    txt = regEx.Replace(txt, "[Sanitized_Number]")
+    txt = regEx.Replace(txt, "[Redacted]")
     
     SanitizeInputText = txt
 End Function
