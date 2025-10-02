@@ -6,69 +6,22 @@ Function SanitizeInputText(inputText As String) As String
     Set regEx = CreateObject("VBScript.RegExp")
     
     '-----------------------------------
-    ' Regex patterns and replacement labels
+    ' Replace all numbers
     '-----------------------------------
-    Dim patterns As Variant
-    Dim replacements As Variant
-    
-patterns = Array( _
-    "\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", _                       ' Email addresses
-    "\b(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?|\d{3}[-.\s]?)?\d{3}[-.\s]?\d{4}\b", _  ' Phone numbers
-    "\b(?:\d{1,3}\.){3}\d{1,3}\b", _                                      ' IPv4 addresses
-    "\b(?:\d{4}[-\s]?){3}\d{4}\b", _                                      ' Credit card numbers (basic)
-    "\b\d{8,12}\b", _                                                     ' Bank account numbers (basic)
-    "\bhttps?://[^\s/$.?#].[^\s]*\b", _                                   ' URLs
-    "\b\d{3}-\d{2}-\d{4}\b", _                                            ' US Social Security Number (SSN)
-    "\b[A-Z0-9]{6,9}\b", _                                                ' Passport numbers (generic)
-    "\b\d{4}-\d{2}-\d{2}\b", _                                            ' Dates YYYY-MM-DD
-    "\b\d{2}/\d{2}/\d{4}\b" _                                             ' Dates DD/MM/YYYY
-)
-
-
-
-
-
-    replacements = Array( _
-        "[Redacted_Email]", _
-        "[Redacted_Phone]", _
-        "[Redacted_IP]", _
-        "[Redacted_Credit_Card]", _
-        "[Redacted_Account_Number]", _
-        "[Redacted_URL]", _
-        "[Redacted_SSN]", _
-        "[Redacted_Passport]", _
-        "[Redacted_Date]", _
-        "[Redacted_Date]" _
-    )
-
-    
-    Dim i As Long
-    For i = LBound(patterns) To UBound(patterns)
-        With regEx
-            .Pattern = patterns(i)
-            .IgnoreCase = True
-            .Global = True
-        End With
-        txt = regEx.Replace(txt, replacements(i))
-    Next i
+    With regEx
+        .Pattern = "\d+"
+        .Global = True
+    End With
+    txt = regEx.Replace(txt, "[Sanitized_Number]")
     
     '-----------------------------------
-    ' Company-specific keywords
+    ' Replace all special characters (non-alphanumeric)
     '-----------------------------------
-    Dim keywords As Variant
-    keywords = Array("ProjectX", "ConfidentialCode", "InternalServer", "TopSecret", "EmployeeName") ' Add your own
-    
-    Dim j As Long
-    For j = LBound(keywords) To UBound(keywords)
-        txt = Replace(txt, keywords(j), "[Redacted_" & keywords(j) & "]", , , vbTextCompare)
-    Next j
-    
-    '-----------------------------------
-    ' Final validation: remove all remaining numbers
-    '-----------------------------------
-    regEx.Pattern = "\d+"
-    regEx.Global = True
-    txt = regEx.Replace(txt, "[Redacted_Number]")
+    With regEx
+        .Pattern = "[^A-Za-z0-9\s]+"  ' Keep letters, numbers, and spaces
+        .Global = True
+    End With
+    txt = regEx.Replace(txt, "[Sanitized_Character]")
     
     ' Return sanitized text
     SanitizeInputText = txt
