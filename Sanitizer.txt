@@ -1,23 +1,17 @@
 Function SanitizeInputText(inputText As String) As String
     Dim txt As String
-    txt = LCase(inputText)  ' Convert text to lowercase
+    txt = LCase(inputText)
     
     Dim words() As String
-    words = Split(txt, " ")  ' Split text into words
+    words = Split(txt, " ")
     
-    '-----------------------------------
-    ' Step 1: Spell check to replace unknown words with [Redacted]
-    '-----------------------------------
     Dim wdApp As Object
     Set wdApp = CreateObject("Word.Application")
     wdApp.Visible = False
     
-    Dim i As Long
-    Dim w As String
+    Dim i As Long, w As String
     For i = LBound(words) To UBound(words)
         w = words(i)
-        
-        ' Check spelling for alphabetic words only
         If w <> "" And w Like "*[A-Za-z]*" Then
             If Not wdApp.CheckSpelling(w) Then
                 words(i) = "[Redacted]"
@@ -28,17 +22,13 @@ Function SanitizeInputText(inputText As String) As String
     wdApp.Quit
     Set wdApp = Nothing
     
-    ' Reassemble text
     txt = Join(words, " ")
     
-    '-----------------------------------
-    ' Step 2: Sanitize numbers and special characters as one entity
-    '-----------------------------------
     Dim regEx As Object
     Set regEx = CreateObject("VBScript.RegExp")
     
     With regEx
-        .Pattern = "[^a-z\s'-]+"   ' Anything that is NOT a letter, space, apostrophe, or hyphen
+        .Pattern = "[^a-z\s'\-\[\]]+"  ' Allow letters, spaces, apostrophes, hyphens, and brackets
         .Global = True
     End With
     txt = regEx.Replace(txt, "[Redacted]")
