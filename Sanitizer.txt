@@ -11,18 +11,19 @@ Function SanitizeInputText(inputText As String) As String
     Dim patterns As Variant
     Dim replacements As Variant
     
-    patterns = Array( _
-        "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b", _          ' Email
-        "(\+?\d{1,4}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?){1,4}\d{1,4}", _ ' Phone (Intl)
-        "\\b\d{1,3}(\.\d{1,3}){3}\\b", _                            ' IP Address
-        "\\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\\b", _           ' Credit Card
-        "\\b\d{8,16}\\b", _                                         ' Account Numbers
-        "(https?:\/\/[^\s]+|www\.[^\s]+)", _                        ' URLs
-        "\\b\d{3}-\d{2}-\d{4}\\b", _                                 ' SSN (US)
-        "\\b[A-Z]{2}\d{6,9}\\b", _                                   ' Passport numbers
-        "\\b\d{2}/\d{2}/\d{2,4}\\b", _                               ' Dates MM/DD/YYYY
-        "\\b\d{4}-\d{2}-\d{2}\\b"                                    ' Dates YYYY-MM-DD
-    )
+patterns = Array( _
+    "\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b", _          ' Email
+    "(\\+?\\d{1,4}[-.\\s]?)?(\\(?\\d{1,4}\\)?[-.\\s]?){1,4}\\d{1,4}", _ ' Phone (Intl)
+    "\\b\\d{1,3}(\\.\\d{1,3}){3}\\b", _                            ' IP Address
+    "\\b\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}[-\\s]?\\d{4}\\b", _       ' Credit Card
+    "\\b\\d{8,16}\\b", _                                         ' Account Numbers
+    "(https?:\\/\\/[^\\s]+|www\\.[^\\s]+)", _                     ' URLs
+    "\\b\\d{3}-\\d{2}-\\d{4}\\b", _                               ' SSN (US)
+    "\\b[A-Z]{2}\\d{6,9}\\b", _                                   ' Passport numbers
+    "\\b\\d{2}/\\d{2}/\\d{2,4}\\b", _                              ' Dates MM/DD/YYYY
+    "\\b\\d{4}-\\d{2}-\\d{2}\\b"                                   ' Dates YYYY-MM-DD
+)
+
 
 
 
