@@ -1,0 +1,11 @@
+Private Sub TextBoxInput_Change()
+    ' Prevent cursor jump by storing selection
+    Dim selStart As Long
+    selStart = TextBoxInput.SelStart
+    
+    ' Sanitize text
+    TextBoxOutput.Text = SanitizeInputText(TextBoxInput.Text)
+    
+    ' Restore cursor position
+    TextBoxInput.SelStart = selStart
+End Sub
