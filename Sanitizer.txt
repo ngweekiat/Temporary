@@ -6,7 +6,7 @@ Function SanitizeInputText(inputText As String) As String
     Set regEx = CreateObject("VBScript.RegExp")
     
     '-----------------------------------
-    ' Replace all numbers
+    ' Step 1: Replace all numbers
     '-----------------------------------
     With regEx
         .Pattern = "\d+"
@@ -15,14 +15,40 @@ Function SanitizeInputText(inputText As String) As String
     txt = regEx.Replace(txt, "[Sanitized_Number]")
     
     '-----------------------------------
-    ' Replace all special characters (non-alphanumeric)
+    ' Step 2: Replace all special characters (non-alphanumeric, keep spaces)
     '-----------------------------------
     With regEx
-        .Pattern = "[^A-Za-z0-9\s]+"  ' Keep letters, numbers, and spaces
+        .Pattern = "[^A-Za-z0-9\s]+"
         .Global = True
     End With
     txt = regEx.Replace(txt, "[Sanitized_Character]")
     
-    ' Return sanitized text
+    '-----------------------------------
+    ' Step 3: Replace unknown words with [Sanitized_ID]
+    '-----------------------------------
+    Dim words() As String
+    words = Split(txt, " ")
+    
+    Dim wdApp As Object
+    Set wdApp = CreateObject("Word.Application")
+    wdApp.Visible = False
+    
+    Dim i As Long
+    For i = LBound(words) To UBound(words)
+        Dim w As String
+        w = words(i)
+        
+        ' Skip sanitized numbers or characters
+        If w <> "[Sanitized_Number]" And w <> "[Sanitized_Character]" Then
+            If Not wdApp.CheckSpelling(w) Then
+                words(i) = "[Sanitized_ID]"
+            End If
+        End If
+    Next i
+    
+    wdApp.Quit
+    Set wdApp = Nothing
+    
+    txt = Join(words, " ")
     SanitizeInputText = txt
 End Function
