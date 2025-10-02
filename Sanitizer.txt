@@ -1,7 +1,27 @@
-Function SanitizeInputText(inputText As String) As String
+Function SanitizeSensitiveText(inputText As String) As String
     Dim txt As String
     txt = LCase(inputText)
     
+    Dim regEx As Object
+    Set regEx = CreateObject("VBScript.RegExp")
+    
+    '----------------------------
+    ' Step 1: Regex for obvious sensitive patterns
+    '----------------------------
+    ' Example: numbers, emails, URLs
+    regEx.Pattern = "\d+"
+    regEx.Global = True
+    txt = regEx.Replace(txt, "[Redacted]")
+    
+    regEx.Pattern = "https?://[^\s]+"
+    txt = regEx.Replace(txt, "[Redacted]")
+    
+    regEx.Pattern = "\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"
+    txt = regEx.Replace(txt, "[Redacted]")
+    
+    '----------------------------
+    ' Step 2: Spell check for unknown words
+    '----------------------------
     Dim words() As String
     words = Split(txt, " ")
     
@@ -9,7 +29,8 @@ Function SanitizeInputText(inputText As String) As String
     Set wdApp = CreateObject("Word.Application")
     wdApp.Visible = False
     
-    Dim i As Long, w As String
+    Dim i As Long
+    Dim w As String
     For i = LBound(words) To UBound(words)
         w = words(i)
         If w <> "" And w Like "*[A-Za-z]*" Then
@@ -24,14 +45,5 @@ Function SanitizeInputText(inputText As String) As String
     
     txt = Join(words, " ")
     
-    Dim regEx As Object
-    Set regEx = CreateObject("VBScript.RegExp")
-    
-    With regEx
-        .Pattern = "[^a-z\s'\-\[\]]+"  ' Allow letters, spaces, apostrophes, hyphens, and brackets
-        .Global = True
-    End With
-    txt = regEx.Replace(txt, "[Redacted]")
-    
-    SanitizeInputText = txt
+    SanitizeSensitiveText = txt
 End Function
