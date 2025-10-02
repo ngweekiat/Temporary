@@ -1,27 +1,12 @@
 Function SanitizeInputText(inputText As String) As String
     Dim txt As String
-    txt = LCase(inputText)  ' Convert to lowercase for spell checking
+    txt = LCase(inputText)  ' Convert text to lowercase
     
-    Dim regEx As Object
-    Set regEx = CreateObject("VBScript.RegExp")
-    
-    '-----------------------------------
-    ' Step 1: Replace all numbers and special characters (except ' and -) as one entity
-    '-----------------------------------
-    With regEx
-        .Pattern = "[^a-z\s'-]+"  ' Match anything that is NOT a letter, space, apostrophe, or hyphen
-        .Global = True
-    End With
-    txt = regEx.Replace(txt, "[Sanitized_Number]")
-    
-    '-----------------------------------
-    ' Step 2: Split into words while preserving internal ' and -
-    '-----------------------------------
     Dim words() As String
-    words = Split(txt, " ")
+    words = Split(txt, " ")  ' Split text into words
     
     '-----------------------------------
-    ' Step 3: Use Word spell checker for unknown words
+    ' Step 1: Spell check to replace unknown words with [Sanitized_ID]
     '-----------------------------------
     Dim wdApp As Object
     Set wdApp = CreateObject("Word.Application")
@@ -32,8 +17,8 @@ Function SanitizeInputText(inputText As String) As String
     For i = LBound(words) To UBound(words)
         w = words(i)
         
-        ' Skip already sanitized numbers
-        If w <> "[Sanitized_Number]" Then
+        ' Check spelling for alphabetic words only
+        If w <> "" And w Like "*[A-Za-z]*" Then
             If Not wdApp.CheckSpelling(w) Then
                 words(i) = "[Sanitized_ID]"
             End If
@@ -43,9 +28,20 @@ Function SanitizeInputText(inputText As String) As String
     wdApp.Quit
     Set wdApp = Nothing
     
-    '-----------------------------------
-    ' Step 4: Reassemble text
-    '-----------------------------------
+    ' Reassemble text
     txt = Join(words, " ")
+    
+    '-----------------------------------
+    ' Step 2: Sanitize numbers and special characters as one entity
+    '-----------------------------------
+    Dim regEx As Object
+    Set regEx = CreateObject("VBScript.RegExp")
+    
+    With regEx
+        .Pattern = "[^a-z\s'-]+"   ' Anything that is NOT a letter, space, apostrophe, or hyphen
+        .Global = True
+    End With
+    txt = regEx.Replace(txt, "[Sanitized_Number]")
+    
     SanitizeInputText = txt
 End Function
