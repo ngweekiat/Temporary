@@ -1,32 +1,35 @@
 Function SanitizeInputText(inputText As String) As String
     Dim txt As String
-    txt = LCase(inputText)  ' Convert all text to lowercase
-
+    txt = LCase(inputText)  ' Convert to lowercase for spell checking
+    
     Dim regEx As Object
     Set regEx = CreateObject("VBScript.RegExp")
     
     '-----------------------------------
-    ' Step 1: Replace numbers and special characters as one entity
+    ' Step 1: Replace all numbers and special characters (except ' and -) as one entity
     '-----------------------------------
     With regEx
-        .Pattern = "[^a-z\s]+"   ' Match anything that is NOT a letter or space
+        .Pattern = "[^a-z\s'-]+"  ' Match anything that is NOT a letter, space, apostrophe, or hyphen
         .Global = True
     End With
     txt = regEx.Replace(txt, "[Sanitized_Number]")
     
     '-----------------------------------
-    ' Step 2: Replace unknown words with [Sanitized_ID]
+    ' Step 2: Split into words while preserving internal ' and -
     '-----------------------------------
     Dim words() As String
     words = Split(txt, " ")
     
+    '-----------------------------------
+    ' Step 3: Use Word spell checker for unknown words
+    '-----------------------------------
     Dim wdApp As Object
     Set wdApp = CreateObject("Word.Application")
     wdApp.Visible = False
     
     Dim i As Long
+    Dim w As String
     For i = LBound(words) To UBound(words)
-        Dim w As String
         w = words(i)
         
         ' Skip already sanitized numbers
@@ -40,6 +43,9 @@ Function SanitizeInputText(inputText As String) As String
     wdApp.Quit
     Set wdApp = Nothing
     
+    '-----------------------------------
+    ' Step 4: Reassemble text
+    '-----------------------------------
     txt = Join(words, " ")
     SanitizeInputText = txt
 End Function
