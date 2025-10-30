@@ -2,15 +2,14 @@ Option Explicit
 
 Private gBrowser As AutomateBrowser   ' keep Edge alive across calls
 
-Function CaptureScreenshotBySerial(ByVal serialNumber As String) As String
-    Dim url As String
-    Dim start As Date, timeoutSeconds As Long
+Sub CaptureGoogleScreenshot()
     Dim msg As Dictionary
+    Dim start As Date, timeoutSeconds As Long
     Dim imgData As String
     Dim imgBytes() As Byte
     Dim outPath As String
-    
-    ' Launch browser once if not already started
+
+    ' Launch Edge via AutomateBrowser
     If gBrowser Is Nothing Then
         Set gBrowser = New_AutomateBrowser
         gBrowser.launch whichBrowser:=browserType.Edge, _
@@ -20,14 +19,11 @@ Function CaptureScreenshotBySerial(ByVal serialNumber As String) As String
         gBrowser.cdp.Runtime.enable
         gBrowser.cdp.Network.enable
     End If
-    
-    ' Build URL for this serial
-    url = "https://yourserver/path/to/" & serialNumber & ".xml"
-    
-    ' Navigate to the URL
-    gBrowser.cdp.Page.navigate url
-    
-    ' Wait for Page.loadEventFired
+
+    ' Navigate to Google
+    gBrowser.cdp.Page.navigate "https://www.google.com"
+
+    ' Wait until page load completes
     timeoutSeconds = 10
     start = Now
     Do While DateDiff("s", start, Now) < timeoutSeconds
@@ -40,41 +36,18 @@ Function CaptureScreenshotBySerial(ByVal serialNumber As String) As String
         End If
         DoEvents
     Loop
-    
-    ' Capture screenshot (PNG)
+
+    ' Take screenshot
     imgData = gBrowser.cdp.Page.captureScreenshot("png")
-    
-    If Len(imgData) = 0 Then
-        CaptureScreenshotBySerial = ""
-        Exit Function
-    End If
-    
-    ' Decode and save image
+
+    ' Decode base64 and save
     imgBytes = DecodeBase64(imgData)
-    outPath = ThisWorkbook.Path & "\" & serialNumber & ".png"
+    outPath = ThisWorkbook.Path & "\google_screenshot.png"
     SaveBytesToFile imgBytes, outPath
-    
-    CaptureScreenshotBySerial = outPath
-End Function
 
+    MsgBox "Screenshot saved: " & outPath, vbInformation
 
-Sub TestCaptureScreenshots()
-    Dim ws As Worksheet
-    Dim lastRow As Long, r As Long
-    Dim serialNumber As String
-    Dim filePath As String
-    
-    Set ws = ThisWorkbook.Sheets(1)
-    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
-    
-    For r = 2 To lastRow
-        serialNumber = Trim(ws.Cells(r, "A").Value)
-        If Len(serialNumber) > 0 Then
-            filePath = CaptureScreenshotBySerial(serialNumber)
-            ws.Cells(r, "B").Value = filePath
-        End If
-    Next r
-    
+    ' Close browser
     CloseBrowser
 End Sub
 
@@ -91,7 +64,6 @@ Private Function DecodeBase64(ByVal base64String As String) As Byte()
     DecodeBase64 = node.NodeTypedValue
 End Function
 
-
 Private Sub SaveBytesToFile(ByRef bytes() As Byte, ByVal filePath As String)
     Dim stream As Object
     Set stream = CreateObject("ADODB.Stream")
@@ -103,7 +75,6 @@ Private Sub SaveBytesToFile(ByRef bytes() As Byte, ByVal filePath As String)
         .Close
     End With
 End Sub
-
 
 Sub CloseBrowser()
     If Not gBrowser Is Nothing Then
