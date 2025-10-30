@@ -1,34 +1,33 @@
 Option Explicit
 
-Private gBrowser As AutomateBrowser   ' keep Edge alive across calls
-
 Sub CaptureGoogleScreenshot()
+    Dim browser As AutomateBrowser
     Dim msg As Dictionary
     Dim start As Date, timeoutSeconds As Long
     Dim imgData As String
     Dim imgBytes() As Byte
     Dim outPath As String
 
-    ' Launch Edge via AutomateBrowser
-    If gBrowser Is Nothing Then
-        Set gBrowser = New_AutomateBrowser
-        gBrowser.launch whichBrowser:=browserType.Edge, _
-                        url:="about:blank", _
-                        killWithoutAsking:=True
-        gBrowser.cdp.Page.enable
-        gBrowser.cdp.Runtime.enable
-        gBrowser.cdp.Network.enable
-    End If
+    ' Launch Edge browser
+    Set browser = New_AutomateBrowser
+    browser.launch whichBrowser:=browserType.Edge, _
+                   url:="about:blank", _
+                   killWithoutAsking:=True
+
+    ' Enable required CDP domains
+    browser.cdp.Page.enable
+    browser.cdp.Runtime.enable
+    browser.cdp.Network.enable
 
     ' Navigate to Google
-    gBrowser.cdp.Page.navigate "https://www.google.com"
+    browser.cdp.Page.navigate "https://www.google.com"
 
-    ' Wait until page load completes
+    ' Wait for Page.loadEventFired
     timeoutSeconds = 10
     start = Now
     Do While DateDiff("s", start, Now) < timeoutSeconds
-        gBrowser.cdp.peakMessage
-        Set msg = gBrowser.cdp.popMessageFromQueue
+        browser.cdp.peakMessage
+        Set msg = browser.cdp.popMessageFromQueue
         If Not msg Is Nothing Then
             If msg.Exists("method") Then
                 If msg("method") = "Page.loadEventFired" Then Exit Do
@@ -37,18 +36,18 @@ Sub CaptureGoogleScreenshot()
         DoEvents
     Loop
 
-    ' Take screenshot
-    imgData = gBrowser.cdp.Page.captureScreenshot("png")
+    ' Take screenshot (PNG)
+    imgData = browser.cdp.Page.captureScreenshot("png")
 
-    ' Decode base64 and save
+    ' Decode Base64 → binary → save
     imgBytes = DecodeBase64(imgData)
     outPath = ThisWorkbook.Path & "\google_screenshot.png"
     SaveBytesToFile imgBytes, outPath
 
-    MsgBox "Screenshot saved: " & outPath, vbInformation
+    MsgBox "Screenshot saved to: " & outPath, vbInformation
 
     ' Close browser
-    CloseBrowser
+    browser.Quit
 End Sub
 
 
@@ -74,11 +73,4 @@ Private Sub SaveBytesToFile(ByRef bytes() As Byte, ByVal filePath As String)
         .SaveToFile filePath, 2 'overwrite
         .Close
     End With
-End Sub
-
-Sub CloseBrowser()
-    If Not gBrowser Is Nothing Then
-        gBrowser.Quit
-        Set gBrowser = Nothing
-    End If
 End Sub
