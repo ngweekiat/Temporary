@@ -74,3 +74,6 @@ Private Sub SaveBytesToFile(ByRef bytes() As Byte, ByVal filePath As String)
         .Close
     End With
 End Sub
+
+
+browser.cdp.Runtime.evaluate "document.querySelector('textarea[formcontrolname=""phoneString""]').value = '" & phoneNumber & "';"
