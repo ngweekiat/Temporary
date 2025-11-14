@@ -76,4 +76,13 @@ Private Sub SaveBytesToFile(ByRef bytes() As Byte, ByVal filePath As String)
 End Sub
 
 
-browser.cdp.Runtime.evaluate "document.querySelector('textarea[formcontrolname=""phoneString""]').value = '" & phoneNumber & "';"
+'--------------------------------------
+' Fill the textarea using formcontrolname
+'--------------------------------------
+Private Sub FillPhoneStringTextarea(ByRef browser As Object, ByVal value As String)
+    Dim jsCode As String
+    jsCode = "document.querySelector(""textarea[formcontrolname='phoneString']"").value = """ & value & """;"
+    browser.cdp.Runtime.evaluate jsCode
+End Sub
+
+    FillPhoneStringTextarea browser, inputValue
