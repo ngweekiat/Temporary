@@ -1,26 +1,21 @@
 Option Explicit
 
-Sub CallAPI()
-    Dim http As WinHttp.WinHttpRequest
+Sub Jira_Call()
+    Dim http As Object
     Dim url As String
-    Dim apitoken As String
-    Dim body As String
+    Dim token As String
 
-    url = "https://your-endpoint-here"
-    apitoken = "{apitoken}"
-    body = "{}" ' whatever JSON you want to send
+    url = "https://your-jira/rest/api/2/issue/MT-XXXX"
+    token = "YOUR_PAT"
 
-    Set http = New WinHttp.WinHttpRequest
-    http.Open "POST", url, False
+    Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
 
-    ' Headers
-    http.SetRequestHeader "Authorization", "Bearer " & apitoken
+    http.Open "GET", url, False
+    http.SetRequestHeader "Authorization", "Bearer " & token
     http.SetRequestHeader "Content-Type", "application/json"
 
-    ' Send
-    http.Send body
+    http.Send
 
-    ' Response
     Debug.Print http.Status
     Debug.Print http.ResponseText
 End Sub
