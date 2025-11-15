@@ -1,0 +1,26 @@
+Option Explicit
+
+Sub CallAPI()
+    Dim http As WinHttp.WinHttpRequest
+    Dim url As String
+    Dim apitoken As String
+    Dim body As String
+
+    url = "https://your-endpoint-here"
+    apitoken = "{apitoken}"
+    body = "{}" ' whatever JSON you want to send
+
+    Set http = New WinHttp.WinHttpRequest
+    http.Open "POST", url, False
+
+    ' Headers
+    http.SetRequestHeader "Authorization", "Bearer " & apitoken
+    http.SetRequestHeader "Content-Type", "application/json"
+
+    ' Send
+    http.Send body
+
+    ' Response
+    Debug.Print http.Status
+    Debug.Print http.ResponseText
+End Sub

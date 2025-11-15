@@ -75,18 +75,3 @@ Private Sub SaveBytesToFile(ByRef bytes() As Byte, ByVal filePath As String)
     End With
 End Sub
 
-
-Private Sub PastePhoneString(ByRef browser As Object, ByVal value As String)
-    Dim jsCode As String
-    
-    ' Set value and trigger input/change events
-    jsCode = ""
-    jsCode = jsCode & "var el = document.querySelector(""textarea[formcontrolname='phoneString']"");"
-    jsCode = jsCode & "el.focus();"
-    jsCode = jsCode & "el.value = '" & value & "';"
-    jsCode = jsCode & "el.dispatchEvent(new Event('input', { bubbles: true }));"
-    jsCode = jsCode & "el.dispatchEvent(new Event('change', { bubbles: true }));"
-    
-    browser.cdp.Runtime.evaluate jsCode
-End Sub
-
