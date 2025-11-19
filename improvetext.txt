@@ -1,0 +1,128 @@
+Option Explicit
+
+' Module-level variable to keep browser open
+Dim browser As AutomateBrowser
+
+'--------------------------------------
+' Launch or attach to the persistent Edge instance
+'--------------------------------------
+Sub LaunchEdgeOnce()
+    If browser Is Nothing Then
+        Set browser = New_AutomateBrowser
+        browser.launch whichBrowser:=browserType.Edge, _
+                       url:="about:blank", _
+                       killWithoutAsking:=True
+                       
+        ' Enable CDP domains
+        browser.cdp.Page.enable
+        browser.cdp.Runtime.enable
+        browser.cdp.Network.enable
+    End If
+End Sub
+
+'--------------------------------------
+' Navigate to a new URL and wait for load
+'--------------------------------------
+Sub GoToSite(url As String)
+    ' Make sure browser is running
+    If browser Is Nothing Then Call LaunchEdgeOnce
+
+    ' Navigate to new URL
+    browser.cdp.Page.navigate url
+
+    ' Wait for Page.loadEventFired
+    Dim start As Date, timeoutSeconds As Long
+    Dim msg As Dictionary
+    timeoutSeconds = 10
+    start = Now
+    Do While DateDiff("s", start, Now) < timeoutSeconds
+        browser.cdp.peakMessage
+        Set msg = browser.cdp.popMessageFromQueue
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "Page.loadEventFired" Then Exit Do
+            End If
+        End If
+        DoEvents
+    Loop
+End Sub
+
+'--------------------------------------
+' Input text into a field and press Enter
+' selectorType = "id" or "name" or "css"
+'--------------------------------------
+Sub InputText(selectorType As String, selectorValue As String, text As String)
+    Dim js As String
+    Select Case selectorType
+        Case "id"
+            js = "var el=document.getElementById('" & selectorValue & "'); el.value='" & text & "';" & _
+                 "el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true}));"
+        Case "name"
+            js = "var el=document.getElementsByName('" & selectorValue & "')[0]; el.value='" & text & "';" & _
+                 "el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true}));"
+        Case "css"
+            js = "var el=document.querySelector('" & selectorValue & "'); el.value='" & text & "';" & _
+                 "el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true}));"
+        Case Else
+            MsgBox "Invalid selector type"
+            Exit Sub
+    End Select
+    
+    browser.cdp.Runtime.Evaluate js
+End Sub
+
+'--------------------------------------
+' Take screenshot of the current page
+'--------------------------------------
+Sub CaptureScreenshot(fileName As String)
+    Dim imgData As String
+    Dim imgBytes() As Byte
+    imgData = browser.cdp.Page.CaptureScreenshot("png")
+    imgBytes = DecodeBase64(imgData)
+    SaveBytesToFile imgBytes, ThisWorkbook.Path & "\" & fileName
+    MsgBox "Screenshot saved to: " & ThisWorkbook.Path & "\" & fileName, vbInformation
+End Sub
+
+'--------------------------------------
+' Helpers
+'--------------------------------------
+Private Function DecodeBase64(ByVal base64String As String) As Byte()
+    Dim xmlObj As Object, node As Object
+    Set xmlObj = CreateObject("MSXML2.DOMDocument")
+    Set node = xmlObj.CreateElement("b64")
+    node.DataType = "bin.base64"
+    node.text = base64String
+    DecodeBase64 = node.NodeTypedValue
+End Function
+
+Private Sub SaveBytesToFile(ByRef bytes() As Byte, ByVal filePath As String)
+    Dim stream As Object
+    Set stream = CreateObject("ADODB.Stream")
+    With stream
+        .Type = 1 'binary
+        .Open
+        .Write bytes
+        .SaveToFile filePath, 2 'overwrite
+        .Close
+    End With
+End Sub
+
+'--------------------------------------
+' Example usage
+'--------------------------------------
+Sub TestMultipleSearches()
+    ' Launch persistent Edge
+    LaunchEdgeOnce
+    
+    ' Go to Google and search "cat"
+    GoToSite "https://www.google.com"
+    InputText "id", "APjFqb", "cat"
+    CaptureScreenshot "google_cat.png"
+    
+    ' Go to Bing and search "dog"
+    GoToSite "https://www.bing.com"
+    InputText "name", "q", "dog"
+    CaptureScreenshot "bing_dog.png"
+End Sub
+
+
