@@ -1,0 +1,65 @@
+Option Explicit
+
+Dim br As AutomateBrowser
+
+Sub RefreshUntilEmpty()
+    Dim html As String
+    Dim js As String
+    Dim value As String
+    Dim start As Date
+    
+    ' Launch browser once
+    If br Is Nothing Then
+        Set br = New_AutomateBrowser
+        br.launch whichBrowser:=browserType.Edge, url:="https://your-target-page.com", killWithoutAsking:=True
+        br.cdp.Page.enable
+        br.cdp.Runtime.enable
+    End If
+    
+    Do
+        ' Refresh the page
+        br.cdp.Page.reload
+        
+        ' Wait for load event
+        WaitForLoad 8
+        
+        ' Get content of the target element
+        js = "var el=document.querySelector('td.field-category.nowrap');" & _
+             "el ? el.textContent.trim() : '';"
+
+        value = br.cdp.Runtime.evaluate(js)("result")("value")
+        
+        Debug.Print "Current value: [" & value & "]"
+        
+        ' Stop when blank
+        If Trim(value) = "" Then Exit Do
+        
+        ' Wait 5 seconds before next refresh
+        start = Now
+        Do While Timer - start < 5
+            DoEvents
+        Loop
+        
+    Loop
+
+    MsgBox "Element is now blank. Stopped refreshing."
+End Sub
+
+
+Private Sub WaitForLoad(timeoutSeconds As Long)
+    Dim t As Date: t = Now
+    Dim msg As Dictionary
+    
+    Do While DateDiff("s", t, Now) < timeoutSeconds
+        br.cdp.peakMessage
+        Set msg = br.cdp.popMessageFromQueue
+        
+        If Not msg Is Nothing Then
+            If msg.Exists("method") Then
+                If msg("method") = "Page.loadEventFired" Then Exit Do
+            End If
+        End If
+        
+        DoEvents
+    Loop
+End Sub
