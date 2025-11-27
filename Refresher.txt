@@ -2,11 +2,10 @@ Option Explicit
 
 Dim br As AutomateBrowser
 
-Sub RefreshUntilEmpty()
-    Dim html As String
+Sub RefreshUntilMalicious()
     Dim js As String
     Dim value As String
-    Dim start As Date
+    Dim start As Double
     
     ' Launch browser once
     If br Is Nothing Then
@@ -17,32 +16,32 @@ Sub RefreshUntilEmpty()
     End If
     
     Do
-        ' Refresh the page
+        ' Refresh
         br.cdp.Page.reload
         
-        ' Wait for load event
+        ' Wait for load
         WaitForLoad 8
         
-        ' Get content of the target element
+        ' Read the target element
         js = "var el=document.querySelector('td.field-category.nowrap');" & _
              "el ? el.textContent.trim() : '';"
-
+        
         value = br.cdp.Runtime.evaluate(js)("result")("value")
         
         Debug.Print "Current value: [" & value & "]"
         
-        ' Stop when blank
-        If Trim(value) = "" Then Exit Do
+        ' Stop when text is "Possible Malicious"
+        If LCase(Trim(value)) = "possible malicious" Then Exit Do
         
-        ' Wait 5 seconds before next refresh
-        start = Now
+        ' Wait 5 seconds
+        start = Timer
         Do While Timer - start < 5
             DoEvents
         Loop
         
     Loop
 
-    MsgBox "Element is now blank. Stopped refreshing."
+    MsgBox "Detected: Possible Malicious"
 End Sub
 
 
